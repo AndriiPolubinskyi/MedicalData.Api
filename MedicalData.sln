@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MedicalData.Api", "MedicalData.Api\MedicalData.Api.csproj", "{C9BF14C3-A816-4208-ABD8-FEA157E9BBA5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MedicalData.Client", "MedicalData.Client\MedicalData.Client\MedicalData.Client.csproj", "{FFC00049-43C4-4384-BE79-CC857208EEF2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{C9BF14C3-A816-4208-ABD8-FEA157E9BBA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C9BF14C3-A816-4208-ABD8-FEA157E9BBA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C9BF14C3-A816-4208-ABD8-FEA157E9BBA5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FFC00049-43C4-4384-BE79-CC857208EEF2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FFC00049-43C4-4384-BE79-CC857208EEF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FFC00049-43C4-4384-BE79-CC857208EEF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FFC00049-43C4-4384-BE79-CC857208EEF2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
