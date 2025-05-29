@@ -1,0 +1,102 @@
+﻿@page "/"
+@using MedicalData.Client.Models
+@using Plotly.Blazor
+@using Plotly.Blazor.LayoutLib
+@using Plotly.Blazor.Traces
+@inject HttpClient Http
+
+
+    @if (labTypes == null)
+    {
+        <FluentProgressRing />
+        <p>Загрузка...</p>
+    }
+    else
+    {
+        <FluentStack VerticalAlignment="VerticalAlignment.Center" Orientation="Orientation.Vertical" Spacing="20px">
+            <FluentListbox Style="width: 400px;" ValueChanged="OnValueChanged" Items="labTypes"/>
+        
+
+            @if (plot != null)
+            {
+                <PlotlyChart 
+                             Config="@plot.Config"
+                             Layout="@plot.Layout"
+                             Data="@plot.Data" @ref="plot"
+                             @key="plotVersion"/>
+            }
+        </FluentStack>
+    }
+
+    @code {
+    private List<string>? labTypes;
+    private int plotVersion = 0;
+    private PlotlyChart? plot;
+
+    protected override async Task OnInitializedAsync()
+    {
+        labTypes = await Http.GetFromJsonAsync<List<string>>(
+            "/api/LabResult/labtypes");
+    }
+
+    private async Task OnValueChanged(string value)
+    {
+        var testName = value;
+
+
+        var results = await Http.GetFromJsonAsync<List<LabResult>>(
+            $"/api/LabResult/labresults?testName={testName}");
+
+        if (results is not null)
+        {
+            var dates = results.OrderBy(r => r.TestDate).Select(r => r.TestDate.ToString("dd-MM-yyyy")).ToArray();
+            var values = results.OrderBy(r => r.TestDate).Select(r => r.Value).ToList();
+            var ReferenceRange = results.First(x => !string.IsNullOrEmpty(x.ReferenceRange)).ReferenceRange;
+            plot = new PlotlyChart
+            {
+                Data = new List<ITrace>
+                {
+                    new Scatter
+                    {
+                        Name = ReferenceRange,
+                        Mode = Plotly.Blazor.Traces.ScatterLib.ModeFlag.Lines | Plotly.Blazor.Traces.ScatterLib.ModeFlag.Markers,
+                        X = dates,
+                        Y = values.Cast<object>().ToList(),
+                        Line = new Plotly.Blazor.Traces.ScatterLib.Line
+                        {
+                            Color = "blue"
+                        }
+                    }
+                },
+                Layout = new Layout
+                {
+                    Title = new Title { Text = ReferenceRange },
+                    XAxis = new List<XAxis>
+                    {
+                        new()
+                        {
+                            Title = new Plotly.Blazor.LayoutLib.XAxisLib.Title { Text = "Дата" }
+                        }
+                    },
+                    YAxis = new List<YAxis>
+                    {
+                        new()
+                        {
+                            Title = new Plotly.Blazor.LayoutLib.YAxisLib.Title { Text = "Значення" }
+                        }
+                    }
+                },
+                Config = new Plotly.Blazor.Config
+                {
+                    Responsive = true
+                }
+            };
+        }
+
+
+        plotVersion++;
+
+        StateHasChanged(); 
+    }
+
+}
