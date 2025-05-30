@@ -7,10 +7,10 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["MedicalData.Client/MedicalData.Client/MedicalData.Client.csproj", "MedicalData.Client/MedicalData.Client/"]
-RUN dotnet restore "MedicalData.Client/MedicalData.Client/MedicalData.Client.csproj"
+COPY ["MedicalData.Client/MedicalData.Client.csproj", "MedicalData.Client/"]
+RUN dotnet restore "MedicalData.Client/MedicalData.Client.csproj"
 COPY . .
-WORKDIR "/src/MedicalData.Client/MedicalData.Client"
+WORKDIR "/src/MedicalData.Client"
 RUN dotnet build "./MedicalData.Client.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
