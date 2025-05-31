@@ -1,23 +1,15 @@
-﻿FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
-USER $APP_UID
-WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
-
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+﻿FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["MedicalData.Client/MedicalData.Client.csproj", "MedicalData.Client/"]
-RUN dotnet restore "MedicalData.Client/MedicalData.Client.csproj"
-COPY . .
+COPY ["MedicalData.Client.csproj", "MedicalData.Client/"]
 WORKDIR "/src/MedicalData.Client"
-RUN dotnet build "./MedicalData.Client.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet restore
+COPY . .
+RUN dotnet publish -c Release -o /app/dist
 
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./MedicalData.Client.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+# Статический хост через nginx
+FROM nginx:alpine AS final
+COPY nginx.conf /etc/nginx/nginx.conf
 
-FROM base AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "MedicalData.Client.dll"]
+COPY --from=build /app/dist/wwwroot /usr/share/nginx/html
+EXPOSE 80
