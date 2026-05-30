@@ -1,0 +1,115 @@
+@page "/shared/{Token}"
+@inject HttpClient Http
+
+<div style="max-width:900px;margin:24px auto;padding:0 16px;">
+
+@if (loading)
+{
+    <p class="muted">Завантаження…</p>
+}
+else if (error != null)
+{
+    <div style="padding:20px;background:#fff8f8;border:1px solid #fca5a5;border-radius:12px;color:#991b1b;">
+        @error
+    </div>
+}
+else if (data != null)
+{
+    <div class="card">
+        <h2 class="card-title">
+            Аналізи: @data.OwnerName
+            @if (data.Scope == "latest") { <span class="chip chip-ok" style="margin-left:8px;">Останній</span> }
+        </h2>
+
+        @if (data.ExpiresAt.HasValue)
+        {
+            <p class="muted" style="margin:-10px 0 14px;font-size:13px;">
+                Посилання дійсне до @data.ExpiresAt.Value.ToString("dd.MM.yyyy")
+            </p>
+        }
+
+        @foreach (var g in data.Results
+            .GroupBy(r => r.TestDate.Date)
+            .OrderByDescending(grp => grp.Key))
+        {
+            <div style="margin-bottom:20px;">
+                <div class="tl-year-header" style="margin-bottom:8px;">@FormatDate(g.Key)</div>
+                <div style="overflow-x:auto;">
+                    <table class="data-table compact">
+                        <thead>
+                            <tr>
+                                <th>Показник</th>
+                                <th class="right">Значення</th>
+                                <th>Од.</th>
+                                <th>Норма</th>
+                                <th class="center">⚠</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in g.OrderBy(x => x.TestName))
+                            {
+                                <tr class="@(r.IsAbnormal ? "row-warn" : "")">
+                                    <td>@r.TestName</td>
+                                    <td class="right @(r.IsAbnormal ? "val-warn" : "")">@r.Value.ToString("G6")</td>
+                                    <td class="muted">@r.Unit</td>
+                                    <td class="muted">@r.ReferenceRange</td>
+                                    <td class="center">@(r.IsAbnormal ? "⚠️" : "✓")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+}
+</div>
+
+@code {
+    [Parameter] public string Token { get; set; } = "";
+
+    private SharedDataDto? data;
+    private bool loading = true;
+    private string? error;
+
+    private static readonly string[] Months =
+        ["січня","лютого","березня","квітня","травня","червня",
+         "липня","серпня","вересня","жовтня","листопада","грудня"];
+    private static string FormatDate(DateTime d) => $"{d.Day} {Months[d.Month-1]} {d.Year}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var resp = await Http.GetAsync($"/api/share/{Token}");
+            if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+                error = "Посилання не знайдено або недійсне.";
+            else if ((int)resp.StatusCode == 410)
+                error = "Термін дії посилання закінчився.";
+            else if (!resp.IsSuccessStatusCode)
+                error = "Помилка завантаження даних.";
+            else
+                data = await resp.Content.ReadFromJsonAsync<SharedDataDto>();
+        }
+        catch { error = "Не вдалося підключитись до сервера."; }
+        finally { loading = false; }
+    }
+
+    private sealed class SharedDataDto
+    {
+        public string OwnerName { get; set; } = "";
+        public string Scope { get; set; } = "";
+        public DateTime? ExpiresAt { get; set; }
+        public List<LabResultDto> Results { get; set; } = [];
+    }
+
+    private sealed class LabResultDto
+    {
+        public string TestName { get; set; } = "";
+        public double Value { get; set; }
+        public string Unit { get; set; } = "";
+        public string ReferenceRange { get; set; } = "";
+        public DateTime TestDate { get; set; }
+        public bool IsAbnormal { get; set; }
+    }
+}

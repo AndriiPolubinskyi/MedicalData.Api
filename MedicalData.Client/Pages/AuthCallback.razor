@@ -1,0 +1,31 @@
+@page "/auth/callback"
+@layout BlankLayout
+@inject AuthService Auth
+@inject AuthStateProvider AuthState
+@inject NavigationManager Nav
+
+<div class="login-wrap">
+    <div class="login-card">
+        <div class="login-logo">⏳</div>
+        <p class="login-sub">Входимо…</p>
+    </div>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = new Uri(Nav.Uri);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+
+        if (query.TryGetValue("token", out var token) && !string.IsNullOrWhiteSpace(token))
+        {
+            await Auth.SetTokenAsync(token!);
+            AuthState.NotifyChanged();
+            Nav.NavigateTo("/");
+        }
+        else
+        {
+            Nav.NavigateTo("/login?error=1");
+        }
+    }
+}

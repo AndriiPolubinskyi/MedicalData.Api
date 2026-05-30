@@ -1,5 +1,10 @@
 bin/
 obj/
+**/.dp-keys/
 /packages/
 riderModule.iml
 /_ReSharper.Caches/
+**/appsettings.Test.json
+**/appsettings.Development.json
+.claude/
+.idea/

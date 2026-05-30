@@ -9,4 +9,7 @@ public class LabResult
     public string ReferenceRange { get; set; } = "";
     public DateTime TestDate { get; set; }
     public string PatientName { get; set; } = "";
+    public bool IsAbnormal { get; set; }
+    public Guid? UserId { get; set; }
+    public User? User { get; set; }
 }
