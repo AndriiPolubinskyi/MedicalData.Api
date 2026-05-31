@@ -13,10 +13,12 @@ if (!builder.Environment.IsDevelopment())
         .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
         .AddEnvironmentVariables();
 
-    var cs = $"Host={Environment.GetEnvironmentVariable("DB_HOST")};" +
-             $"Database={Environment.GetEnvironmentVariable("DB_NAME")};" +
-             $"Username={Environment.GetEnvironmentVariable("DB_USER")};" +
-             $"Password={Environment.GetEnvironmentVariable("DB_PASS")};";
+    var cs = builder.Configuration.GetConnectionString("DefaultConnection")
+             ?? $"Host={Environment.GetEnvironmentVariable("DB_HOST")};" +
+                $"Database={Environment.GetEnvironmentVariable("DB_NAME")};" +
+                $"Username={Environment.GetEnvironmentVariable("DB_USER")};" +
+                $"Password={Environment.GetEnvironmentVariable("DB_PASS")};" +
+                "SSL Mode=Require;Trust Server Certificate=true;";
     builder.Services.AddDbContext<AppDbContext>(o => o.UseNpgsql(cs));
 }
 else
@@ -50,8 +52,8 @@ builder.Services
     })
     .AddGoogle(o =>
     {
-        o.ClientId     = builder.Configuration["Google:ClientId"]!;
-        o.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
+        o.ClientId     = builder.Configuration["Authentication:Google:ClientId"]!;
+        o.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
         o.SignInScheme  = "TempCookie";
         o.CorrelationCookie.SameSite     = SameSiteMode.Lax;
         o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.None;
