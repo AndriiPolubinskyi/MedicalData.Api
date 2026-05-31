@@ -205,18 +205,39 @@
                                     <th>@Loc["tbl.unit"]</th>
                                     <th>@Loc["tbl.range"]</th>
                                     <th class="center">⚠</th>
+                                    <th class="center">AI</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var m in parsedResults.OrderBy(x => x.TestName))
                                 {
+                                    var uploadKey = m.TestName;
+                                    var isExplaining = uploadExplainLoading.Contains(uploadKey);
+                                    uploadExplainTexts.TryGetValue(uploadKey, out var explainText);
                                     <tr class="@(m.IsAbnormal ? "row-warn" : "")">
                                         <td>@m.TestName</td>
                                         <td class="right @(m.IsAbnormal ? "val-warn" : "val-ok")">@m.Value.ToString("G6")</td>
                                         <td class="muted">@m.Unit</td>
                                         <td class="muted">@m.ReferenceRange</td>
                                         <td class="center">@(m.IsAbnormal ? "⚠️" : "✓")</td>
+                                        <td class="center">
+                                            <button class="explain-btn @(m.IsAbnormal ? "explain-btn-warn" : "")"
+                                                    @onclick="() => ExplainUploadAsync(m)"
+                                                    disabled="@isExplaining"
+                                                    title="@Loc["ai.explain"]">
+                                                @(isExplaining ? "⏳" : "🤖")
+                                            </button>
+                                        </td>
                                     </tr>
+                                    @if (!string.IsNullOrWhiteSpace(explainText))
+                                    {
+                                        <tr class="explain-row">
+                                            <td colspan="6" class="explain-cell">
+                                                <span class="explain-icon">🤖</span> @explainText
+                                                <button class="explain-close" @onclick="() => uploadExplainTexts.Remove(uploadKey)">✕</button>
+                                            </td>
+                                        </tr>
+                                    }
                                 }
                             </tbody>
                         </table>
@@ -371,18 +392,39 @@
                                                                 <th>@Loc["tbl.unit"]</th>
                                                                 <th>@Loc["tbl.range"]</th>
                                                                 <th class="center">⚠</th>
+                                                                <th class="center">AI</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
                                                             @foreach (var r in items.OrderBy(x => x.TestName))
                                                             {
+                                                                var explainKey = r.Id;
+                                                                var isExplaining = explainLoading.Contains(explainKey);
+                                                                explainTexts.TryGetValue(explainKey, out var explainText);
                                                                 <tr class="@(r.IsAbnormal ? "row-warn" : "")">
                                                                     <td>@r.TestName</td>
                                                                     <td class="right @(r.IsAbnormal ? "val-warn" : "")">@r.Value.ToString("G6")</td>
                                                                     <td class="muted">@r.Unit</td>
                                                                     <td class="muted">@r.ReferenceRange</td>
                                                                     <td class="center">@(r.IsAbnormal ? "⚠️" : "✓")</td>
+                                                                    <td class="center">
+                                                                        <button class="explain-btn @(r.IsAbnormal ? "explain-btn-warn" : "")"
+                                                                                @onclick="() => ExplainAsync(r)"
+                                                                                disabled="@isExplaining"
+                                                                                title="@Loc["ai.explain"]">
+                                                                            @(isExplaining ? "⏳" : "🤖")
+                                                                        </button>
+                                                                    </td>
                                                                 </tr>
+                                                                @if (!string.IsNullOrWhiteSpace(explainText))
+                                                                {
+                                                                    <tr class="explain-row">
+                                                                        <td colspan="6" class="explain-cell">
+                                                                            <span class="explain-icon">🤖</span> @explainText
+                                                                            <button class="explain-close" @onclick="() => explainTexts.Remove(explainKey)">✕</button>
+                                                                        </td>
+                                                                    </tr>
+                                                                }
                                                             }
                                                         </tbody>
                                                     </table>
@@ -517,6 +559,63 @@
     private string? filterCategory;
     private string? shareUrl;
     private string? shareScope;
+
+    // ── AI explain per indicator ──────────────────────
+    private Dictionary<int, string> explainTexts = new();
+    private HashSet<int> explainLoading = new();
+    private Dictionary<string, string> uploadExplainTexts = new();
+    private HashSet<string> uploadExplainLoading = new();
+
+    private async Task ExplainAsync(LabResult r)
+    {
+        if (explainLoading.Contains(r.Id)) return;
+        if (explainTexts.ContainsKey(r.Id)) { explainTexts.Remove(r.Id); return; }
+        explainLoading.Add(r.Id);
+        StateHasChanged();
+        try
+        {
+            var resp = await Http.PostAsJsonAsync("/api/LabResult/ai-explain", new
+            {
+                testName = r.TestName, value = r.Value,
+                unit = r.Unit, referenceRange = r.ReferenceRange,
+                lang = Loc.Lang
+            });
+            if (resp.IsSuccessStatusCode)
+            {
+                var obj = await resp.Content.ReadFromJsonAsync<ExplainResponse>();
+                if (obj?.Explanation != null) explainTexts[r.Id] = obj.Explanation;
+            }
+        }
+        catch { }
+        finally { explainLoading.Remove(r.Id); StateHasChanged(); }
+    }
+
+    private async Task ExplainUploadAsync(ParsedLabMetric m)
+    {
+        var key = m.TestName;
+        if (uploadExplainLoading.Contains(key)) return;
+        if (uploadExplainTexts.ContainsKey(key)) { uploadExplainTexts.Remove(key); return; }
+        uploadExplainLoading.Add(key);
+        StateHasChanged();
+        try
+        {
+            var resp = await Http.PostAsJsonAsync("/api/LabResult/ai-explain", new
+            {
+                testName = m.TestName, value = m.Value,
+                unit = m.Unit, referenceRange = m.ReferenceRange,
+                lang = Loc.Lang
+            });
+            if (resp.IsSuccessStatusCode)
+            {
+                var obj = await resp.Content.ReadFromJsonAsync<ExplainResponse>();
+                if (obj?.Explanation != null) uploadExplainTexts[key] = obj.Explanation;
+            }
+        }
+        catch { }
+        finally { uploadExplainLoading.Remove(key); StateHasChanged(); }
+    }
+
+    private record ExplainResponse(string? Explanation);
 
     // ── Charts ────────────────────────────────────────
     private List<string>? labTypes;

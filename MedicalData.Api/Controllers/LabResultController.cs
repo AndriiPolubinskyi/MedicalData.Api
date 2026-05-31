@@ -202,6 +202,25 @@ public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAge
         }
     }
 
+    [HttpPost("ai-explain")]
+    public async Task<ActionResult> GetAiExplain(
+        [FromBody] AiExplainRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (labAiService is null)
+            return StatusCode(503, "AI service not configured.");
+        try
+        {
+            var explanation = await labAiService.GetExplainAsync(
+                request.TestName, request.Value, request.Unit, request.ReferenceRange, request.Lang, cancellationToken);
+            return Ok(new { explanation });
+        }
+        catch (Exception)
+        {
+            return StatusCode(503, "Failed to generate explanation.");
+        }
+    }
+
     [HttpPost("update_text")]
     public async Task<ActionResult<LabResult>> UpdateText()
     {
@@ -372,7 +391,7 @@ public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAge
                 TestDate = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc),
                 Unit = string.IsNullOrWhiteSpace(metric.Unit) ? metadata?.Unit ?? string.Empty : metric.Unit,
                 ReferenceRange = string.IsNullOrWhiteSpace(metric.ReferenceRange) ? metadata?.ReferenceRange ?? string.Empty : metric.ReferenceRange,
-                IsAbnormal = metric.IsAbnormal,
+                IsAbnormal = metric.IsAbnormal || LabResultHelper.IsOutOfRange(metric.Value, metric.ReferenceRange),
                 UserId = userId,
             };
         }).ToList();

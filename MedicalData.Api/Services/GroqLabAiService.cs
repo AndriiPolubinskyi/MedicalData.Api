@@ -142,4 +142,62 @@ public class GroqLabAiService : ILabAiService
             throw new InvalidOperationException($"Failed to parse Groq API response: {ex.Message}", ex);
         }
     }
+
+    public async Task<string> GetExplainAsync(string testName, double value, string unit, string referenceRange, string lang, CancellationToken ct = default)
+    {
+        var isAbnormal = LabResultHelper.IsOutOfRange(value, referenceRange);
+        var status = isAbnormal ? "ВІДХИЛЕННЯ від норми" : "в нормі";
+
+        var (systemPrompt, userMessage) = lang switch
+        {
+            "en" => (
+                "You are a medical assistant. Explain a single lab result to a patient in plain English. " +
+                "2-3 sentences max: what this test measures, and what the current value means for health. " +
+                "If abnormal, explain what it may indicate. No bullet points, no markdown, plain text only.",
+                $"Test: {testName}\nValue: {value} {unit}\nReference range: {referenceRange}\nStatus: {(isAbnormal ? "ABNORMAL" : "normal")}"
+            ),
+            "ru" => (
+                "Ты медицинский ассистент. Объясни один показатель анализа пациенту простым языком. " +
+                "Максимум 2-3 предложения: что измеряет этот показатель и что означает текущее значение. " +
+                "Если отклонение — скажи что это может означать. Без списков, без markdown, только обычный текст.",
+                $"Показатель: {testName}\nЗначение: {value} {unit}\nНорма: {referenceRange}\nСтатус: {(isAbnormal ? "ОТКЛОНЕНИЕ" : "в норме")}"
+            ),
+            _ => (
+                "Ти медичний асистент. Поясни один показник аналізу пацієнту простою мовою. " +
+                "Максимум 2-3 речення: що вимірює цей показник і що означає поточне значення. " +
+                "Якщо відхилення — скажи що це може означати. Без списків, без markdown, тільки звичайний текст.",
+                $"Показник: {testName}\nЗначення: {value} {unit}\nНорма: {referenceRange}\nСтатус: {status}"
+            )
+        };
+
+        var requestBody = new
+        {
+            model = _model,
+            messages = new[]
+            {
+                new { role = "system", content = systemPrompt },
+                new { role = "user",   content = userMessage  }
+            },
+            temperature = 0.3,
+            max_tokens  = 200
+        };
+
+        var json = JsonSerializer.Serialize(requestBody, JsonOptions);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.groq.com/openai/v1/chat/completions");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+        request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var response = await _http.SendAsync(request, ct);
+        var responseBody = await response.Content.ReadAsStringAsync(ct);
+
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException($"Groq API returned {(int)response.StatusCode}: {responseBody}");
+
+        using var doc = JsonDocument.Parse(responseBody);
+        return doc.RootElement
+            .GetProperty("choices")[0]
+            .GetProperty("message")
+            .GetProperty("content")
+            .GetString() ?? throw new InvalidOperationException("Empty response from Groq.");
+    }
 }
