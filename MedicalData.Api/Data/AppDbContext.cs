@@ -1,13 +1,15 @@
 using MedicalData.Api.Models;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace MedicalData.Api.Data;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options), IDataProtectionKeyContext
 {
     public DbSet<LabResult> LabResults { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<ShareToken> ShareTokens { get; set; }
+    public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder model)
     {

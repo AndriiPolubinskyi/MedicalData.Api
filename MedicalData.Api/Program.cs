@@ -28,10 +28,9 @@ else
         o.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 }
 
-// ── DataProtection (persist keys so restarts don't break OAuth cookies) ───────
-var keysDir = Path.Combine(builder.Environment.ContentRootPath, ".dp-keys");
+// ── DataProtection (persist keys in DB so Render restarts don't break OAuth) ──
 builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(keysDir));
+    .PersistKeysToDbContext<AppDbContext>();
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 builder.Services.AddSingleton<JwtService>();
@@ -47,9 +46,9 @@ builder.Services
     .AddJwtBearer(o => o.TokenValidationParameters = jwtService.ValidationParameters)
     .AddCookie("TempCookie", o =>
     {
-        o.ExpireTimeSpan       = TimeSpan.FromMinutes(10);
-        o.Cookie.SameSite      = SameSiteMode.Lax;
-        o.Cookie.SecurePolicy  = CookieSecurePolicy.None;
+        o.ExpireTimeSpan      = TimeSpan.FromMinutes(10);
+        o.Cookie.SameSite     = SameSiteMode.Lax;
+        o.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     })
     .AddGoogle(o =>
     {
@@ -57,7 +56,7 @@ builder.Services
         o.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"]!;
         o.SignInScheme  = "TempCookie";
         o.CorrelationCookie.SameSite     = SameSiteMode.Lax;
-        o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.None;
+        o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
         o.Scope.Add("email");
         o.Scope.Add("profile");
     });
