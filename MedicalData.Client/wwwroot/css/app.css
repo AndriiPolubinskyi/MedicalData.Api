@@ -390,14 +390,15 @@ body {
 .login-title { font-size: 22px; font-weight: 700; color: #1e293b; margin: 0 0 6px; }
 .login-sub   { color: #64748b; font-size: 14px; margin: 0 0 32px; }
 .google-btn {
-    display: inline-flex; align-items: center; gap: 10px;
-    padding: 12px 24px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 12px 24px;
     background: #fff; color: #1e293b;
     border: 1.5px solid #e2e8f0; border-radius: 12px;
     font-size: 15px; font-weight: 500;
     text-decoration: none; cursor: pointer;
     box-shadow: 0 1px 4px rgba(0,0,0,.07);
     transition: box-shadow 0.15s, border-color 0.15s;
+    box-sizing: border-box;
 }
 .google-btn:hover { box-shadow: 0 4px 14px rgba(0,0,0,.1); border-color: #bfdbfe; }
 
