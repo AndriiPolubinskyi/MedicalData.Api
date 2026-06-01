@@ -95,7 +95,8 @@ public class GroqLabAiService : ILabAiService
         _http = httpClientFactory.CreateClient("groq");
     }
 
-    private static readonly (string Label, string[] Keywords)[] CategoryRules =
+    // Internal key (uk) → translated display labels per lang
+    private static readonly (string Key, string[] Keywords)[] CategoryRules =
     [
         ("ЗАГАЛЬНИЙ АНАЛІЗ КРОВІ", ["гемоглобін", "еритроцит", "лейкоцит", "тромбоцит", "гематокрит", "шое", "лімфоцит", "моноцит", "базофіл", "еозинофіл", "сегментоядерн", "паличкоядерн", "метамієлоцит", "мієлоцит", "тромбокрит", "плазматичн", "hgb", "rbc", "wbc", "plt", "hct", "esr", "mcv", "mch", "rdw", "mpv", "pct", "pdw", "ly%", "mo%", "ba%", "eo%", "ne%"]),
         ("ЛІПІДОГРАМА",            ["холестерин", "тригліцерид", "ліпо", "лпвщ", "лпнщ", "лпднщ", "hdl", "ldl", "vldl", "chol", "атероген", "non-hdl", "не-лпвщ", "non–hdl"]),
@@ -105,20 +106,47 @@ public class GroqLabAiService : ILabAiService
         ("ІНФЕКЦІЙНА СЕРОЛОГІЯ",   ["хелікобактер", "helicobacter", "антитіл", "вірус", "інфекц"]),
     ];
 
+    private static readonly Dictionary<string, Dictionary<string, string>> CategoryLabels = new()
+    {
+        ["en"] = new()
+        {
+            ["ЗАГАЛЬНИЙ АНАЛІЗ КРОВІ"]    = "COMPLETE BLOOD COUNT",
+            ["ЛІПІДОГРАМА"]               = "LIPID PROFILE",
+            ["БІОХІМІЯ"]                  = "BIOCHEMISTRY",
+            ["ГОРМОНИ ТА ЕНДОКРИНОЛОГІЯ"] = "HORMONES & ENDOCRINOLOGY",
+            ["ОНКОМАРКЕРИ"]               = "TUMOR MARKERS",
+            ["ІНФЕКЦІЙНА СЕРОЛОГІЯ"]      = "SEROLOGY",
+            ["ІНШЕ"]                      = "OTHER",
+        },
+        ["ru"] = new()
+        {
+            ["ЗАГАЛЬНИЙ АНАЛІЗ КРОВІ"]    = "ОБЩИЙ АНАЛИЗ КРОВИ",
+            ["ЛІПІДОГРАМА"]               = "ЛИПИДОГРАММА",
+            ["БІОХІМІЯ"]                  = "БИОХИМИЯ",
+            ["ГОРМОНИ ТА ЕНДОКРИНОЛОГІЯ"] = "ГОРМОНЫ И ЭНДОКРИНОЛОГИЯ",
+            ["ОНКОМАРКЕРИ"]               = "ОНКОМАРКЕРЫ",
+            ["ІНФЕКЦІЙНА СЕРОЛОГІЯ"]      = "ИНФЕКЦИОННАЯ СЕРОЛОГИЯ",
+            ["ІНШЕ"]                      = "ПРОЧЕЕ",
+        },
+    };
+
     private static string GetCategory(string testName)
     {
         var n = testName.ToLowerInvariant();
-        foreach (var (label, keywords) in CategoryRules)
+        foreach (var (key, keywords) in CategoryRules)
             if (keywords.Any(k => n.Contains(k)))
-                return label;
+                return key;
         return "ІНШЕ";
     }
+
+    private static string TranslateCategory(string key, string lang) =>
+        CategoryLabels.TryGetValue(lang, out var map) && map.TryGetValue(key, out var v) ? v : key;
 
     public async Task<string> GetSummaryAsync(DateTime date, IReadOnlyList<AiSummaryItem> results, string lang = "uk", PatientContext? patient = null, CancellationToken ct = default)
     {
         var grouped = results
             .GroupBy(r => GetCategory(r.TestName))
-            .OrderBy(g => Array.FindIndex(CategoryRules, r => r.Label == g.Key))
+            .OrderBy(g => Array.FindIndex(CategoryRules, r => r.Key == g.Key))
             .ToList();
 
         var (dateLabel, refLabel, abnLabel, patientLabel) = lang switch
@@ -136,7 +164,7 @@ public class GroqLabAiService : ILabAiService
 
         foreach (var group in grouped)
         {
-            sb.AppendLine($"[{group.Key}]");
+            sb.AppendLine($"[{TranslateCategory(group.Key, lang)}]");
             foreach (var item in group)
             {
                 var line = $"  {item.TestName}: {item.Value} {item.Unit}";

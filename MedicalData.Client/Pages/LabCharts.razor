@@ -133,9 +133,9 @@
                 <!-- ── HERO ────────────────────────────── -->
                 <section class="hero">
                     <div class="hero-left">
-                        <div class="hero-eyebrow">✨ AI-аналіз</div>
-                        <h1 class="hero-title">Розшифруйте свої аналізи за допомогою <span>AI</span></h1>
-                        <p class="hero-sub">Завантажте PDF з лабораторними результатами та отримайте зрозуміле пояснення кожного показника.</p>
+                        <div class="hero-eyebrow">@Loc["hero.eyebrow"]</div>
+                        <h1 class="hero-title">@Loc["hero.title"]</h1>
+                        <p class="hero-sub">@Loc["hero.sub"]</p>
                         <div class="hero-actions">
                             @if (!isDemo)
                             {
@@ -188,11 +188,11 @@
                             </div>
                         </div>
                         <div class="hero-float-badge badge-ai">
-                            <div class="badge-label">AI висновок</div>
+                            <div class="badge-label">@Loc["hero.badge.ai"]</div>
                             <div class="badge-val" style="color:#a5b4fc">Готовий ✓</div>
                         </div>
                         <div class="hero-float-badge badge-ok">
-                            <div class="badge-label">Норма</div>
+                            <div class="badge-label">@Loc["hero.badge.norm"]</div>
                             <div class="badge-val" style="color:#22C55E">24 показники ✓</div>
                         </div>
                     </div>
@@ -259,7 +259,7 @@
                 <div class="ai-conclusion-card">
                     <div class="ai-conclusion-header">
                         <div class="ai-conclusion-icon">🤖</div>
-                        <div class="ai-conclusion-title">AI висновок</div>
+                        <div class="ai-conclusion-title">@Loc["ai.conclusion"]</div>
                         <div class="ai-conclusion-badge">AI</div>
                     </div>
                     @if (CurrentSummaryLoading)
@@ -275,11 +275,11 @@
                         <div class="ai-conclusion-placeholder">
                             @if (CurrentAbnormal?.Count > 0)
                             {
-                                @($"Виявлено {CurrentAbnormal.Count} відхилень від норми. Натисніть для повного AI-аналізу.")
+                                @($"{CurrentAbnormal.Count} {Loc["ai.deviation.summary"]}")
                             }
                             else
                             {
-                                @("Показники в нормі. Натисніть для детального AI-аналізу.")
+                                @Loc["ai.normal.summary"]
                             }
                         </div>
                     }
@@ -322,13 +322,13 @@
                                     @if (!string.IsNullOrWhiteSpace(item.ReferenceRange))
                                     {
                                         <div class="deviation-range">
-                                            <span class="deviation-range-label">Норма</span>
+                                            <span class="deviation-range-label">@Loc["col.norm"]</span>
                                             <span class="deviation-range-val">@item.ReferenceRange</span>
                                         </div>
                                     }
                                     <div class="deviation-status">@GetDeviationLabel(item.Value, item.ReferenceRange)</div>
                                     <button class="btn-explain" @onclick="() => ExplainDisplayItemAsync(item)" disabled="@isExpLoading">
-                                        @(isExpLoading ? "⏳ Генерую..." : (explainText != null ? "✕ Закрити" : "🤖 Пояснити"))
+                                        @(isExpLoading ? Loc["ai.loading"] : (explainText != null ? "✕" : Loc["ai.short"]))
                                     </button>
                                     @if (!string.IsNullOrWhiteSpace(explainText))
                                     {
@@ -377,7 +377,7 @@
                                     <th class="right">@Loc["tbl.value"]</th>
                                     <th>@Loc["tbl.unit"]</th>
                                     <th>@Loc["tbl.range"]</th>
-                                    <th class="center">Статус</th>
+                                    <th class="center">@Loc["col.status"]</th>
                                     <th class="center">AI</th>
                                 </tr>
                             </thead>
@@ -395,11 +395,11 @@
                                         <td class="center">
                                             @if (item.IsAbnormal)
                                             {
-                                                <span class="status-chip warn">⚠ Відхилення</span>
+                                                <span class="status-chip warn">@Loc["status.warn"]</span>
                                             }
                                             else
                                             {
-                                                <span class="status-chip ok">✓ Норма</span>
+                                                <span class="status-chip ok">@Loc["status.ok"]</span>
                                             }
                                         </td>
                                         <td class="center">
@@ -568,7 +568,7 @@
                                                     <th class="right">@Loc["tbl.value"]</th>
                                                     <th>@Loc["tbl.unit"]</th>
                                                     <th>@Loc["tbl.range"]</th>
-                                                    <th class="center">Статус</th>
+                                                    <th class="center">@Loc["col.status"]</th>
                                                     <th class="center">AI</th>
                                                 </tr>
                                             </thead>
@@ -869,7 +869,16 @@
     protected override async Task OnInitializedAsync()
     {
         await Loc.InitAsync();
-        _locHandler = () => InvokeAsync(StateHasChanged);
+        _locHandler = () => InvokeAsync(() =>
+        {
+            // clear cached AI texts so next click generates in the new language
+            dashAiSummary   = null;
+            uploadAiSummary = null;
+            aiSummaries.Clear();
+            displayExplainTexts.Clear();
+            showFullSummary = false;
+            StateHasChanged();
+        });
         Loc.LanguageChanged += _locHandler;
 
         isDemo = Nav.Uri.Contains("/demo", StringComparison.OrdinalIgnoreCase);
@@ -1292,10 +1301,10 @@
         return "dv-other";
     }
 
-    private static string GetDeviationLabel(double value, string? referenceRange)
+    private string GetDeviationLabel(double value, string? referenceRange)
     {
         var cls = GetDeviationClass(value, referenceRange);
-        return cls switch { "dv-high" => "▲ Підвищений", "dv-low" => "▼ Знижений", _ => "⚠ Відхилення" };
+        return cls switch { "dv-high" => Loc["dv.high"], "dv-low" => Loc["dv.low"], _ => Loc["dv.other"] };
     }
 
     private static string GetTestIcon(string name)
