@@ -153,8 +153,17 @@ input, select, textarea { font-family: inherit; }
     width: 100%; padding: 10px 14px; background: rgba(255,255,255,.04);
     border: 1px solid var(--border); border-radius: var(--r-xs); color: var(--text);
     font-size: 14px; transition: border-color .15s;
+    font-family: inherit;
+    -webkit-appearance: none; appearance: none;
+    color-scheme: dark;
 }
 .field-input:focus { outline: none; border-color: var(--accent); }
+.field-input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1) opacity(.5);
+    cursor: pointer;
+}
+.field-input[type="number"]::-webkit-inner-spin-button,
+.field-input[type="number"]::-webkit-outer-spin-button { opacity: .4; }
 .field-hint   { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
 .sex-btns     { display: flex; gap: 8px; }
 .sex-btn {
@@ -689,4 +698,8 @@ fluent-progress-ring { --neutral-fill-rest: var(--accent); }
     .cat-grid { grid-template-columns: 1fr; }
     .hero-visual { display: none; }
     .deviation-grid { grid-template-columns: 1fr; }
+    .modal-card { max-width: 100%; border-radius: var(--r-sm); }
+    .modal-overlay { padding: 12px; align-items: flex-end; }
+    .paywall-plans { flex-direction: column; }
+    .paywall-card { padding: 28px 20px 24px; }
 }
