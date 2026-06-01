@@ -695,19 +695,63 @@
         StateHasChanged();
         try
         {
-            var resp = await Http.PostAsJsonAsync("/api/LabResult/ai-explain", new
+            if (isDemo)
             {
-                testName = item.TestName, value = item.Value,
-                unit = item.Unit, referenceRange = item.ReferenceRange, lang = Loc.Lang
-            });
-            if (resp.IsSuccessStatusCode)
+                await Task.Delay(600);
+                var demo = GetDemoExplanation(item.TestName, item.Value, item.ReferenceRange);
+                displayExplainTexts[key] = demo;
+            }
+            else
             {
-                var obj = await resp.Content.ReadFromJsonAsync<ExplainResponse>();
-                if (obj?.Explanation != null) displayExplainTexts[key] = obj.Explanation;
+                var resp = await Http.PostAsJsonAsync("/api/LabResult/ai-explain", new
+                {
+                    testName = item.TestName, value = item.Value,
+                    unit = item.Unit, referenceRange = item.ReferenceRange, lang = Loc.Lang
+                });
+                if (resp.IsSuccessStatusCode)
+                {
+                    var obj = await resp.Content.ReadFromJsonAsync<ExplainResponse>();
+                    if (obj?.Explanation != null) displayExplainTexts[key] = obj.Explanation;
+                }
             }
         }
         catch { }
         finally { displayExplainLoading.Remove(key); StateHasChanged(); }
+    }
+
+    private string GetDemoExplanation(string testName, double value, string referenceRange)
+    {
+        var n = testName.ToLowerInvariant();
+        return Loc.Lang switch
+        {
+            "en" => n switch
+            {
+                var t when t.Contains("лейкоцит") => $"White blood cells (WBC) = {value} × 10⁹/L (ref {referenceRange}). Slightly elevated WBC may indicate a mild immune response or transient infection. In isolation this is usually not cause for concern. This is general information only and is not a substitute for professional medical advice.",
+                var t when t.Contains("холестерин загальний") || t.Contains("холестерол") => $"Total cholesterol = {value} mmol/L (ref {referenceRange}). Elevated cholesterol increases cardiovascular risk over time. Diet changes and physical activity are the first-line approach. This is general information only and is not a substitute for professional medical advice.",
+                var t when t.Contains("лпнщ") || t.Contains("ldl") => $"LDL cholesterol = {value} mmol/L (ref {referenceRange}). LDL ('bad' cholesterol) contributes to arterial plaque. Target levels depend on individual cardiovascular risk. This is general information only and is not a substitute for professional medical advice.",
+                var t when t.Contains("тригліцерид") => $"Triglycerides = {value} mmol/L (ref {referenceRange}). Elevated triglycerides are linked to diet high in simple carbohydrates and alcohol. Reducing sugar intake typically helps normalize levels. This is general information only and is not a substitute for professional medical advice.",
+                var t when t.Contains("алт") || t.Contains("alt") => $"ALT = {value} U/L (ref {referenceRange}). ALT is a liver enzyme. Mild elevation may result from physical activity, medication, or dietary factors. Persistent elevation warrants further evaluation. This is general information only and is not a substitute for professional medical advice.",
+                _ => $"{testName}: value {value} (ref {referenceRange}). The result requires interpretation by your doctor in the context of your full clinical picture. This is general information only and is not a substitute for professional medical advice."
+            },
+            "ru" => n switch
+            {
+                var t when t.Contains("лейкоцит") => $"Лейкоциты = {value} × 10⁹/л (норма {referenceRange}). Незначительное повышение лейкоцитов может свидетельствовать о лёгкой иммунной реакции или временной инфекции. Изолированно это, как правило, не является серьёзным поводом для беспокойства. Ця інформація є загальноосвітньою і не замінює консультацію лікаря.",
+                var t when t.Contains("холестерин загальний") || t.Contains("холестерол") => $"Загальний холестерин = {value} ммоль/л (норма {referenceRange}). Підвищений холестерин збільшує серцево-судинний ризик. Зміна харчування та фізична активність є першими кроками. Ця інформація є загальноосвітньою і не замінює консультацію лікаря.",
+                var t when t.Contains("лпнщ") => $"ЛПНЩ = {value} ммоль/л (норма {referenceRange}). «Плохой» холестерин способствует образованию атеросклеротических бляшек. Целевые значения зависят от индивидуального сердечно-сосудистого риска. Ця інформація є загальноосвітньою і не замінює консультацію лікаря.",
+                var t when t.Contains("тригліцерид") => $"Тригліцериди = {value} ммоль/л (норма {referenceRange}). Підвищені тригліцериди пов'язані з вживанням простих вуглеводів та алкоголю. Зниження споживання цукру зазвичай нормалізує показник. Ця інформація є загальноосвітньою і не замінює консультацію лікаря.",
+                var t when t.Contains("алт") => $"АЛТ = {value} Од/л (норма {referenceRange}). АЛТ — фермент печени. Лёгкое повышение может быть связано с физической нагрузкой, приёмом лекарств или питанием. При стойком повышении рекомендуется дообследование. Ця інформація є загальноосвітньою і не замінює консультацію лікаря.",
+                _ => $"{testName}: значення {value} (норма {referenceRange}). Результат потребує інтерпретації лікарем з урахуванням вашої клінічної картини. Ця інформація є загальноосвітньою і не замінює консультацію лікаря."
+            },
+            _ => n switch
+            {
+                var t when t.Contains("лейкоцит") => $"Лейкоцити = {value} × 10⁹/л (норма {referenceRange}). Незначне підвищення лейкоцитів може свідчити про легку імунну реакцію або тимчасову інфекцію. Ізольовано це, як правило, не є серйозним приводом для занепокоєння. Ця інформація є загальноосвітньою і не замінює консультацію лікаря.",
+                var t when t.Contains("холестерин загальний") || t.Contains("холестерол") => $"Загальний холестерин = {value} ммоль/л (норма {referenceRange}). Підвищений холестерин збільшує серцево-судинний ризик. Зміна харчування та фізична активність є першими кроками корекції. Ця інформація є загальноосвітньою і не замінює консультацію лікаря.",
+                var t when t.Contains("лпнщ") => $"Холестерин ЛПНЩ = {value} ммоль/л (норма {referenceRange}). «Поганий» холестерин сприяє утворенню атеросклеротичних бляшок. Цільові значення залежать від індивідуального серцево-судинного ризику. Ця інформація є загальноосвітньою і не замінює консультацію лікаря.",
+                var t when t.Contains("тригліцерид") => $"Тригліцериди = {value} ммоль/л (норма {referenceRange}). Підвищені тригліцериди пов'язані з вживанням простих вуглеводів та алкоголю. Зниження споживання цукру зазвичай нормалізує показник. Ця інформація є загальноосвітньою і не замінює консультацію лікаря.",
+                var t when t.Contains("алт") => $"АЛТ = {value} Од/л (норма {referenceRange}). АЛТ — фермент печінки. Легке підвищення може бути пов'язано з фізичним навантаженням, прийомом ліків або харчуванням. При стійкому підвищенні рекомендується додаткове обстеження. Ця інформація є загальноосвітньою і не замінює консультацію лікаря.",
+                _ => $"{testName}: значення {value} (норма {referenceRange}). Результат потребує інтерпретації лікарем з урахуванням вашої клінічної картини. Ця інформація є загальноосвітньою і не замінює консультацію лікаря."
+            }
+        };
     }
 
     private record ExplainResponse(string? Explanation);
@@ -842,17 +886,32 @@
         isDashAiLoading = true; dashAiSummary = null; StateHasChanged();
         try
         {
-            var latestDate = historyByDate.Keys.OrderByDescending(d => d).First();
-            var items = historyByDate[latestDate];
-            var body = new { date = latestDate, results = items.Select(x => new { testName = x.TestName, value = x.Value, unit = x.Unit, referenceRange = x.ReferenceRange, isAbnormal = x.IsAbnormal }) };
-            var resp = await Http.PostAsJsonAsync("/api/LabResult/ai-summary", body);
-            dashAiSummary = resp.IsSuccessStatusCode
-                ? (await resp.Content.ReadFromJsonAsync<AiSummaryResponse>())?.Summary ?? Loc["ai.empty"]
-                : Loc["ai.failed"];
+            if (isDemo)
+            {
+                await Task.Delay(900);
+                dashAiSummary = GetDemoAiSummary();
+            }
+            else
+            {
+                var latestDate = historyByDate.Keys.OrderByDescending(d => d).First();
+                var items = historyByDate[latestDate];
+                var body = new { date = latestDate, results = items.Select(x => new { testName = x.TestName, value = x.Value, unit = x.Unit, referenceRange = x.ReferenceRange, isAbnormal = x.IsAbnormal }) };
+                var resp = await Http.PostAsJsonAsync("/api/LabResult/ai-summary", body);
+                dashAiSummary = resp.IsSuccessStatusCode
+                    ? (await resp.Content.ReadFromJsonAsync<AiSummaryResponse>())?.Summary ?? Loc["ai.empty"]
+                    : Loc["ai.failed"];
+            }
         }
         catch { dashAiSummary = Loc["ai.error"]; }
         finally { isDashAiLoading = false; StateHasChanged(); }
     }
+
+    private string GetDemoAiSummary() => Loc.Lang switch
+    {
+        "en" => "The latest results (November 2025) show significant improvement compared to January 2025. Cholesterol has normalized to 4.9 mmol/L (was 6.4), LDL dropped from 4.2 to 2.9 mmol/L, triglycerides returned to normal (1.4 mmol/L). White blood cells are within range (6.2 × 10⁹/L), liver enzymes ALT and AST are normal. The positive dynamics over 10 months indicate effective lifestyle or treatment changes. This is general information only and is not a substitute for professional medical advice.",
+        "ru" => "Последние результаты (ноябрь 2025) демонстрируют значительное улучшение по сравнению с январём 2025. Общий холестерин нормализовался до 4,9 ммоль/л (был 6,4), ЛПНЩ снизился с 4,2 до 2,9 ммоль/л, триглицериды в норме (1,4 ммоль/л). Лейкоциты в допустимых пределах (6,2 × 10⁹/л), печёночные ферменты АЛТ и АСТ в норме. Позитивная динамика за 10 месяцев свидетельствует об эффективных изменениях в образе жизни или лечении. Ця інформація є загальноосвітньою і не замінює консультацію лікаря.",
+        _    => "Останні результати (листопад 2025) показують суттєве покращення порівняно зі січнем 2025. Загальний холестерин нормалізувався до 4,9 ммоль/л (був 6,4), ЛПНЩ знизився з 4,2 до 2,9 ммоль/л, тригліцериди в нормі (1,4 ммоль/л). Лейкоцити в допустимих межах (6,2 × 10⁹/л), печінкові ферменти АЛТ та АСТ в нормі. Позитивна динаміка за 10 місяців свідчить про ефективні зміни в способі життя або лікуванні. Ця інформація є загальноосвітньою і не замінює консультацію лікаря.",
+    };
 
     // ── Upload logic ──────────────────────────────────
     private Task OnFileSelected(InputFileChangeEventArgs e)
