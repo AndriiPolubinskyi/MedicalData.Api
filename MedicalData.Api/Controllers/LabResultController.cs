@@ -14,15 +14,19 @@ namespace MedicalData.Api.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 [Authorize]
-public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAgentParser, ILabAiService? labAiService = null) : ControllerBase
+public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAgentParser, IConfiguration config, ILabAiService? labAiService = null) : ControllerBase
 {
     private const long MaxPdfSizeBytes = 5 * 1024 * 1024;
+
+    private bool AiCreditsEnabled =>
+        config.GetValue<bool>("Features:AiCreditsEnabled");
 
     private Guid CurrentUserId =>
         Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
     private async Task<ActionResult?> ConsumeAiCreditAsync(CancellationToken ct)
     {
+        if (!AiCreditsEnabled) return null;
         var user = await context.Users.FindAsync([CurrentUserId], ct);
         if (user is null) return Unauthorized();
         if (user.Plan == "unlimited") return null;
