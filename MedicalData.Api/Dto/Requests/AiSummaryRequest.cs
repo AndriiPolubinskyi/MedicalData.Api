@@ -5,6 +5,9 @@ public class AiSummaryRequest
     public DateTime Date { get; set; }
     public List<AiSummaryResultItem> Results { get; set; } = new();
     public string Lang { get; set; } = "uk";
+    public string? Sex { get; set; }
+    public int? AgeYears { get; set; }
+    public int? CycleDay { get; set; }
 }
 
 public class AiSummaryResultItem

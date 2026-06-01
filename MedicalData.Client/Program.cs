@@ -29,6 +29,9 @@ builder.Services.AddScoped(sp =>
 // ── Localization ──────────────────────────────────────────────────────────────
 builder.Services.AddScoped<LocalizationService>();
 
+// ── Profile ───────────────────────────────────────────────────────────────────
+builder.Services.AddScoped<ProfileService>();
+
 // ── UI ────────────────────────────────────────────────────────────────────────
 builder.Services.AddFluentUIComponents();
 

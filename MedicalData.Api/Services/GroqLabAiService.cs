@@ -114,21 +114,23 @@ public class GroqLabAiService : ILabAiService
         return "ІНШЕ";
     }
 
-    public async Task<string> GetSummaryAsync(DateTime date, IReadOnlyList<AiSummaryItem> results, string lang = "uk", CancellationToken ct = default)
+    public async Task<string> GetSummaryAsync(DateTime date, IReadOnlyList<AiSummaryItem> results, string lang = "uk", PatientContext? patient = null, CancellationToken ct = default)
     {
         var grouped = results
             .GroupBy(r => GetCategory(r.TestName))
             .OrderBy(g => Array.FindIndex(CategoryRules, r => r.Label == g.Key))
             .ToList();
 
-        var (dateLabel, refLabel, abnLabel) = lang switch
+        var (dateLabel, refLabel, abnLabel, patientLabel) = lang switch
         {
-            "en" => ("Lab results from", "ref", "ABNORMAL"),
-            "ru" => ("Результаты анализов от", "норма", "ОТКЛОНЕНИЕ"),
-            _    => ("Результати аналізів від",  "норма", "ВІДХИЛЕННЯ"),
+            "en" => ("Lab results from", "ref", "ABNORMAL", "Patient"),
+            "ru" => ("Результаты анализов от", "норма", "ОТКЛОНЕНИЕ", "Пациент"),
+            _    => ("Результати аналізів від", "норма", "ВІДХИЛЕННЯ", "Пацієнт"),
         };
 
         var sb = new StringBuilder();
+        if (patient?.HasAny == true)
+            sb.AppendLine($"{patientLabel}: {patient.Describe(lang)}");
         sb.AppendLine($"{dateLabel} {date:dd.MM.yyyy}:");
         sb.AppendLine();
 
@@ -197,33 +199,44 @@ public class GroqLabAiService : ILabAiService
         }
     }
 
-    public async Task<string> GetExplainAsync(string testName, double value, string unit, string referenceRange, string lang, CancellationToken ct = default)
+    public async Task<string> GetExplainAsync(string testName, double value, string unit, string referenceRange, string lang, PatientContext? patient = null, CancellationToken ct = default)
     {
         var isAbnormal = LabResultHelper.IsOutOfRange(value, referenceRange);
-        var status = isAbnormal ? "ВІДХИЛЕННЯ від норми" : "в нормі";
+
+        var patientLine = patient?.HasAny == true
+            ? lang switch
+            {
+                "en" => $"Patient: {patient.Describe(lang)}\n",
+                "ru" => $"Пациент: {patient.Describe(lang)}\n",
+                _    => $"Пацієнт: {patient.Describe(lang)}\n",
+            }
+            : "";
 
         var (systemPrompt, userMessage) = lang switch
         {
             "en" => (
                 "You are a medical information assistant. Explain a single lab result to a patient in plain English. " +
-                "2-3 sentences: what this test measures, and what the current value may suggest. " +
+                "If patient data is provided, take age, sex and cycle day into account when interpreting the result and reference ranges. " +
+                "2-3 sentences: what this test measures and what the current value may suggest. " +
                 "If abnormal, explain what it may be associated with. No bullet points, no markdown, plain text only. " +
                 "Always end with: \"This is general information only and is not a substitute for professional medical advice.\"",
-                $"Test: {testName}\nValue: {value} {unit}\nReference range: {referenceRange}\nStatus: {(isAbnormal ? "ABNORMAL" : "normal")}"
+                $"{patientLine}Test: {testName}\nValue: {value} {unit}\nReference range: {referenceRange}\nStatus: {(isAbnormal ? "ABNORMAL" : "normal")}"
             ),
             "ru" => (
                 "Ты информационный медицинский ассистент. Объясни один показатель анализа пациенту простым языком. " +
-                "2-3 предложения: что измеряет этот показатель и о чём может говорить текущее значение. " +
-                "Если отклонение — скажи с чем это может быть связано. Без списков, без markdown, только обычный текст. " +
+                "Если переданы данные пациента (пол, возраст, день цикла) — учитывай их при интерпретации результата и нормальных диапазонов. " +
+                "2-3 предложения: что измеряет показатель и о чём говорит текущее значение. " +
+                "Без списков, без markdown, только обычный текст. " +
                 "Всегда заканчивай словами: «Ця інформація є загальноосвітньою і не замінює консультацію лікаря.»",
-                $"Показатель: {testName}\nЗначение: {value} {unit}\nНорма: {referenceRange}\nСтатус: {(isAbnormal ? "ОТКЛОНЕНИЕ" : "в норме")}"
+                $"{patientLine}Показатель: {testName}\nЗначение: {value} {unit}\nНорма: {referenceRange}\nСтатус: {(isAbnormal ? "ОТКЛОНЕНИЕ" : "в норме")}"
             ),
             _ => (
                 "Ти інформаційний медичний асистент. Поясни один показник аналізу пацієнту простою мовою. " +
-                "2-3 речення: що вимірює цей показник і про що може свідчити поточне значення. " +
-                "Якщо відхилення — скажи з чим це може бути пов'язано. Без списків, без markdown, тільки звичайний текст. " +
+                "Якщо передані дані пацієнта (стать, вік, день циклу) — враховуй їх при інтерпретації результату та нормальних діапазонів. " +
+                "2-3 речення: що вимірює показник і про що свідчить поточне значення. " +
+                "Без списків, без markdown, тільки звичайний текст. " +
                 "Завжди закінчуй словами: «Ця інформація є загальноосвітньою і не замінює консультацію лікаря.»",
-                $"Показник: {testName}\nЗначення: {value} {unit}\nНорма: {referenceRange}\nСтатус: {status}"
+                $"{patientLine}Показник: {testName}\nЗначення: {value} {unit}\nНорма: {referenceRange}\nСтатус: {(isAbnormal ? "ВІДХИЛЕННЯ" : "в нормі")}"
             )
         };
 

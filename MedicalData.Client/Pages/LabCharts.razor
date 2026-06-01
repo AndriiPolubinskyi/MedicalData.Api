@@ -13,6 +13,8 @@
 @inject AuthService Auth
 @inject AuthStateProvider AuthState
 @inject LocalizationService Loc
+@inject ProfileService ProfileSvc
+@using MedicalData.Client.Models
 
 <div class="page-shell">
 
@@ -38,8 +40,9 @@
                 </div>
                 @if (!isDemo)
                 {
-                    @if (userPic != null)  { <img src="@userPic" class="user-avatar" alt="" /> }
+                    @if (userPic != null)  { <img src="@userPic" class="user-avatar" alt="" @onclick="OpenProfile" style="cursor:pointer;" /> }
                     @if (userName != null) { <span class="nav-user-name">@userName</span> }
+                    <button class="nav-profile-btn" @onclick="OpenProfile" title="Профіль">⚙</button>
                     <button class="nav-logout-btn" @onclick="LogoutAsync">@Loc["logout"]</button>
                 }
                 else
@@ -49,6 +52,57 @@
             </div>
         </div>
     </nav>
+
+    <!-- ══ PROFILE MODAL ════════════════════════════════ -->
+    @if (showProfileModal)
+    {
+        <div class="modal-overlay" @onclick="CloseProfile">
+            <div class="modal-card" @onclick:stopPropagation>
+                <div class="modal-header">
+                    <span class="modal-title">⚙ @Loc["profile.title"]</span>
+                    <button class="modal-close" @onclick="CloseProfile">✕</button>
+                </div>
+
+                <div class="modal-body">
+                    <label class="field-label">@Loc["profile.sex"]</label>
+                    <div class="sex-btns">
+                        <button class="sex-btn @(profileEdit.Sex == "female" ? "active" : "")"
+                                @onclick='() => { profileEdit.Sex = "female"; }'>♀ @Loc["profile.female"]</button>
+                        <button class="sex-btn @(profileEdit.Sex == "male" ? "active" : "")"
+                                @onclick='() => { profileEdit.Sex = "male"; }'>♂ @Loc["profile.male"]</button>
+                    </div>
+
+                    <label class="field-label" style="margin-top:16px;">@Loc["profile.birthdate"]</label>
+                    <input class="field-input" type="date" max="@DateTime.Today.ToString("yyyy-MM-dd")"
+                           value="@profileEdit.BirthDate"
+                           @onchange='e => profileEdit.BirthDate = e.Value?.ToString()' />
+                    @if (profileEdit.AgeYears.HasValue)
+                    {
+                        <span class="field-hint">@profileEdit.AgeYears @Loc["profile.years"]</span>
+                    }
+
+                    @if (profileEdit.Sex == "female")
+                    {
+                        <label class="field-label" style="margin-top:16px;">@Loc["profile.cycleday"]</label>
+                        <input class="field-input" type="number" min="1" max="28" placeholder="1–28"
+                               value="@profileEdit.CycleDay"
+                               @onchange='e => profileEdit.CycleDay = int.TryParse(e.Value?.ToString(), out var d) ? d : null' />
+                        <span class="field-hint">@Loc["profile.cycleday.hint"]</span>
+                    }
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn-primary" @onclick="SaveProfileAsync" disabled="@profileSaving">
+                        @(profileSaving ? "⏳" : "💾") @Loc["profile.save"]
+                    </button>
+                    @if (profileSaved)
+                    {
+                        <span class="profile-saved-msg">✓ @Loc["profile.saved"]</span>
+                    }
+                </div>
+            </div>
+        </div>
+    }
 
     <!-- ══ CONTENT ══════════════════════════════════════ -->
     <div class="page-content">
@@ -706,7 +760,9 @@
                 var resp = await Http.PostAsJsonAsync("/api/LabResult/ai-explain", new
                 {
                     testName = item.TestName, value = item.Value,
-                    unit = item.Unit, referenceRange = item.ReferenceRange, lang = Loc.Lang
+                    unit = item.Unit, referenceRange = item.ReferenceRange, lang = Loc.Lang,
+                    sex = ProfileSvc.Current?.Sex, ageYears = ProfileSvc.Current?.AgeYears,
+                    cycleDay = ProfileSvc.Current?.CycleDay
                 });
                 if (resp.IsSuccessStatusCode)
                 {
@@ -755,6 +811,35 @@
     }
 
     private record ExplainResponse(string? Explanation);
+
+    // ── Profile modal ─────────────────────────────────
+    private bool showProfileModal;
+    private bool profileSaving;
+    private bool profileSaved;
+    private UserProfile profileEdit = new();
+
+    private void OpenProfile()
+    {
+        profileEdit = ProfileSvc.Current is { } p
+            ? new UserProfile { Sex = p.Sex, BirthDate = p.BirthDate, CycleDay = p.CycleDay }
+            : new UserProfile();
+        profileSaved = false;
+        showProfileModal = true;
+    }
+
+    private void CloseProfile() => showProfileModal = false;
+
+    private async Task SaveProfileAsync()
+    {
+        profileSaving = true;
+        await ProfileSvc.SaveAsync(profileEdit);
+        profileSaving = false;
+        profileSaved = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        profileSaved = false;
+        StateHasChanged();
+    }
 
     // ── Charts ────────────────────────────────────────
     private List<string>? labTypes;
@@ -827,6 +912,7 @@
             var user = await Auth.GetUserAsync();
             if (user.Identity?.IsAuthenticated == true)
             {
+                await ProfileSvc.LoadAsync();
                 userName = user.FindFirst(ClaimTypes.Name)?.Value;
                 userPic  = user.FindFirst("picture")?.Value;
                 StateHasChanged();
@@ -895,7 +981,7 @@
             {
                 var latestDate = historyByDate.Keys.OrderByDescending(d => d).First();
                 var items = historyByDate[latestDate];
-                var body = new { date = latestDate, lang = Loc.Lang, results = items.Select(x => new { testName = x.TestName, value = x.Value, unit = x.Unit, referenceRange = x.ReferenceRange, isAbnormal = x.IsAbnormal }) };
+                var body = new { date = latestDate, lang = Loc.Lang, sex = ProfileSvc.Current?.Sex, ageYears = ProfileSvc.Current?.AgeYears, cycleDay = ProfileSvc.Current?.CycleDay, results = items.Select(x => new { testName = x.TestName, value = x.Value, unit = x.Unit, referenceRange = x.ReferenceRange, isAbnormal = x.IsAbnormal }) };
                 var resp = await Http.PostAsJsonAsync("/api/LabResult/ai-summary", body);
                 dashAiSummary = resp.IsSuccessStatusCode
                     ? (await resp.Content.ReadFromJsonAsync<AiSummaryResponse>())?.Summary ?? Loc["ai.empty"]
@@ -1042,7 +1128,7 @@
         loadingAi.Add(date); StateHasChanged();
         try
         {
-            var body = new { date, lang = Loc.Lang, results = items.Select(x => new { testName = x.TestName, value = x.Value, unit = x.Unit, referenceRange = x.ReferenceRange, isAbnormal = x.IsAbnormal }) };
+            var body = new { date, lang = Loc.Lang, sex = ProfileSvc.Current?.Sex, ageYears = ProfileSvc.Current?.AgeYears, cycleDay = ProfileSvc.Current?.CycleDay, results = items.Select(x => new { testName = x.TestName, value = x.Value, unit = x.Unit, referenceRange = x.ReferenceRange, isAbnormal = x.IsAbnormal }) };
             var resp = await Http.PostAsJsonAsync("/api/LabResult/ai-summary", body);
             aiSummaries[date] = resp.IsSuccessStatusCode
                 ? (await resp.Content.ReadFromJsonAsync<AiSummaryResponse>())?.Summary ?? Loc["ai.empty"]

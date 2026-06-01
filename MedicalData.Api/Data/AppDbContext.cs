@@ -9,6 +9,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<LabResult> LabResults { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<ShareToken> ShareTokens { get; set; }
+    public DbSet<UserProfile> UserProfiles { get; set; }
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder model)
@@ -25,6 +26,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasMany(u => u.ShareTokens)
             .WithOne(t => t.User)
             .HasForeignKey(t => t.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        model.Entity<UserProfile>()
+            .HasKey(p => p.UserId);
+
+        model.Entity<User>()
+            .HasOne<UserProfile>()
+            .WithOne(p => p.User)
+            .HasForeignKey<UserProfile>(p => p.UserId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

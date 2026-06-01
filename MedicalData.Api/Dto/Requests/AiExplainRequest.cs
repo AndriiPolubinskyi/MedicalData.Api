@@ -7,4 +7,7 @@ public class AiExplainRequest
     public string Unit { get; set; } = string.Empty;
     public string ReferenceRange { get; set; } = string.Empty;
     public string Lang { get; set; } = "uk";
+    public string? Sex { get; set; }
+    public int? AgeYears { get; set; }
+    public int? CycleDay { get; set; }
 }

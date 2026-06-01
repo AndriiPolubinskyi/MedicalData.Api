@@ -241,7 +241,8 @@ public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAge
 
         try
         {
-            var summary = await labAiService.GetSummaryAsync(request.Date, items, request.Lang, cancellationToken);
+            var patient = new PatientContext { Sex = request.Sex, AgeYears = request.AgeYears, CycleDay = request.CycleDay };
+            var summary = await labAiService.GetSummaryAsync(request.Date, items, request.Lang, patient.HasAny ? patient : null, cancellationToken);
             return Ok(new { summary });
         }
         catch (Exception)
@@ -260,8 +261,10 @@ public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAge
             return StatusCode(503, "AI service not configured.");
         try
         {
+            var patient = new PatientContext { Sex = request.Sex, AgeYears = request.AgeYears, CycleDay = request.CycleDay };
             var explanation = await labAiService.GetExplainAsync(
-                request.TestName, request.Value, request.Unit, request.ReferenceRange, request.Lang, cancellationToken);
+                request.TestName, request.Value, request.Unit, request.ReferenceRange, request.Lang,
+                patient.HasAny ? patient : null, cancellationToken);
             return Ok(new { explanation });
         }
         catch (Exception)
