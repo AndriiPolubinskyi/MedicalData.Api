@@ -15,10 +15,11 @@
 
 <body>
     <div id="app">
-        <div id="app-splash">
-            <div id="app-splash-ring"></div>
+        <div style="position:fixed;inset:0;background:#0B1025;display:flex;align-items:center;justify-content:center;">
+            <div style="width:56px;height:56px;border:3px solid rgba(99,102,241,.2);border-top-color:#6366f1;border-radius:50%;animation:splash-spin .8s linear infinite;"></div>
         </div>
     </div>
+    <style>@keyframes splash-spin{to{transform:rotate(360deg)}}</style>
 
     <div id="blazor-error-ui">
         An unhandled error has occurred.
