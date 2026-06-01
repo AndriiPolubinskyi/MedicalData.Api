@@ -168,6 +168,9 @@ public class LocalizationService(IJSRuntime js)
 
             ["login.subtitle"]  = "Персональний журнал лабораторних досліджень",
             ["login.google"]    = "Увійти через Google",
+            ["demo.try"]        = "Спробувати демо",
+            ["demo.banner"]     = "Демо-режим — дані приклади, не ваші. Увійдіть, щоб зберегти свої аналізи.",
+            ["demo.login"]      = "Увійти",
         },
 
         ["en"] = new()
@@ -241,6 +244,9 @@ public class LocalizationService(IJSRuntime js)
 
             ["login.subtitle"]  = "Personal lab results journal",
             ["login.google"]    = "Sign in with Google",
+            ["demo.try"]        = "Try demo",
+            ["demo.banner"]     = "Demo mode — sample data only. Sign in to track your own results.",
+            ["demo.login"]      = "Sign in",
         },
 
         ["ru"] = new()
@@ -314,6 +320,9 @@ public class LocalizationService(IJSRuntime js)
 
             ["login.subtitle"]  = "Личный журнал лабораторных исследований",
             ["login.google"]    = "Войти через Google",
+            ["demo.try"]        = "Посмотреть демо",
+            ["demo.banner"]     = "Демо-режим — примерные данные. Войдите, чтобы сохранить свои анализы.",
+            ["demo.login"]      = "Войти",
         },
     };
 }

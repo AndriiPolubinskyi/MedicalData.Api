@@ -17,6 +17,8 @@
             @Loc["login.google"]
         </a>
 
+        <a class="demo-link" href="/demo">@Loc["demo.try"] →</a>
+
         <div class="lang-switcher" style="margin-top:20px;justify-content:center;">
             <button class="lang-btn @(Loc.Lang == "uk" ? "active" : "")" @onclick='() => SwitchLangAsync("uk")'>UA</button>
             <button class="lang-btn @(Loc.Lang == "en" ? "active" : "")" @onclick='() => SwitchLangAsync("en")'>EN</button>

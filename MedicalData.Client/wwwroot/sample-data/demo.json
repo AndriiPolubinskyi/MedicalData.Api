@@ -1,0 +1,32 @@
+[
+  { "id": 1,  "testName": "Гемоглобін",           "value": 138.0, "unit": "г/л",     "referenceRange": "130-175", "isAbnormal": false, "testDate": "2025-01-15T00:00:00Z", "patientName": "" },
+  { "id": 2,  "testName": "Лейкоцити",            "value": 9.8,   "unit": "10⁹/л",   "referenceRange": "4.0-9.0", "isAbnormal": true,  "testDate": "2025-01-15T00:00:00Z", "patientName": "" },
+  { "id": 3,  "testName": "Еритроцити",           "value": 4.8,   "unit": "10¹²/л",  "referenceRange": "4.0-5.5", "isAbnormal": false, "testDate": "2025-01-15T00:00:00Z", "patientName": "" },
+  { "id": 4,  "testName": "Тромбоцити",           "value": 218.0, "unit": "10⁹/л",   "referenceRange": "150-400", "isAbnormal": false, "testDate": "2025-01-15T00:00:00Z", "patientName": "" },
+  { "id": 5,  "testName": "Холестерин загальний", "value": 6.4,   "unit": "ммоль/л", "referenceRange": "<5.2",    "isAbnormal": true,  "testDate": "2025-01-15T00:00:00Z", "patientName": "" },
+  { "id": 6,  "testName": "Холестерин ЛПНЩ",      "value": 4.2,   "unit": "ммоль/л", "referenceRange": "<3.0",    "isAbnormal": true,  "testDate": "2025-01-15T00:00:00Z", "patientName": "" },
+  { "id": 7,  "testName": "Холестерин ЛПВЩ",      "value": 1.05,  "unit": "ммоль/л", "referenceRange": ">1.0",    "isAbnormal": false, "testDate": "2025-01-15T00:00:00Z", "patientName": "" },
+  { "id": 8,  "testName": "Тригліцериди",         "value": 2.6,   "unit": "ммоль/л", "referenceRange": "<1.7",    "isAbnormal": true,  "testDate": "2025-01-15T00:00:00Z", "patientName": "" },
+
+  { "id": 9,  "testName": "Гемоглобін",           "value": 141.0, "unit": "г/л",     "referenceRange": "130-175", "isAbnormal": false, "testDate": "2025-05-10T00:00:00Z", "patientName": "" },
+  { "id": 10, "testName": "Лейкоцити",            "value": 7.9,   "unit": "10⁹/л",   "referenceRange": "4.0-9.0", "isAbnormal": false, "testDate": "2025-05-10T00:00:00Z", "patientName": "" },
+  { "id": 11, "testName": "Еритроцити",           "value": 5.0,   "unit": "10¹²/л",  "referenceRange": "4.0-5.5", "isAbnormal": false, "testDate": "2025-05-10T00:00:00Z", "patientName": "" },
+  { "id": 12, "testName": "Глюкоза",              "value": 5.8,   "unit": "ммоль/л", "referenceRange": "3.9-6.1", "isAbnormal": false, "testDate": "2025-05-10T00:00:00Z", "patientName": "" },
+  { "id": 13, "testName": "АЛТ",                  "value": 52.0,  "unit": "Од/л",    "referenceRange": "<40",     "isAbnormal": true,  "testDate": "2025-05-10T00:00:00Z", "patientName": "" },
+  { "id": 14, "testName": "АСТ",                  "value": 38.0,  "unit": "Од/л",    "referenceRange": "<40",     "isAbnormal": false, "testDate": "2025-05-10T00:00:00Z", "patientName": "" },
+  { "id": 15, "testName": "Холестерин загальний", "value": 5.9,   "unit": "ммоль/л", "referenceRange": "<5.2",    "isAbnormal": true,  "testDate": "2025-05-10T00:00:00Z", "patientName": "" },
+  { "id": 16, "testName": "Холестерин ЛПНЩ",      "value": 3.5,   "unit": "ммоль/л", "referenceRange": "<3.0",    "isAbnormal": true,  "testDate": "2025-05-10T00:00:00Z", "patientName": "" },
+  { "id": 17, "testName": "Тригліцериди",         "value": 1.8,   "unit": "ммоль/л", "referenceRange": "<1.7",    "isAbnormal": true,  "testDate": "2025-05-10T00:00:00Z", "patientName": "" },
+
+  { "id": 18, "testName": "Гемоглобін",           "value": 145.0, "unit": "г/л",     "referenceRange": "130-175", "isAbnormal": false, "testDate": "2025-11-18T00:00:00Z", "patientName": "" },
+  { "id": 19, "testName": "Лейкоцити",            "value": 6.2,   "unit": "10⁹/л",   "referenceRange": "4.0-9.0", "isAbnormal": false, "testDate": "2025-11-18T00:00:00Z", "patientName": "" },
+  { "id": 20, "testName": "Еритроцити",           "value": 5.1,   "unit": "10¹²/л",  "referenceRange": "4.0-5.5", "isAbnormal": false, "testDate": "2025-11-18T00:00:00Z", "patientName": "" },
+  { "id": 21, "testName": "Тромбоцити",           "value": 224.0, "unit": "10⁹/л",   "referenceRange": "150-400", "isAbnormal": false, "testDate": "2025-11-18T00:00:00Z", "patientName": "" },
+  { "id": 22, "testName": "Глюкоза",              "value": 5.3,   "unit": "ммоль/л", "referenceRange": "3.9-6.1", "isAbnormal": false, "testDate": "2025-11-18T00:00:00Z", "patientName": "" },
+  { "id": 23, "testName": "АЛТ",                  "value": 34.0,  "unit": "Од/л",    "referenceRange": "<40",     "isAbnormal": false, "testDate": "2025-11-18T00:00:00Z", "patientName": "" },
+  { "id": 24, "testName": "АСТ",                  "value": 29.0,  "unit": "Од/л",    "referenceRange": "<40",     "isAbnormal": false, "testDate": "2025-11-18T00:00:00Z", "patientName": "" },
+  { "id": 25, "testName": "Холестерин загальний", "value": 4.9,   "unit": "ммоль/л", "referenceRange": "<5.2",    "isAbnormal": false, "testDate": "2025-11-18T00:00:00Z", "patientName": "" },
+  { "id": 26, "testName": "Холестерин ЛПНЩ",      "value": 2.9,   "unit": "ммоль/л", "referenceRange": "<3.0",    "isAbnormal": false, "testDate": "2025-11-18T00:00:00Z", "patientName": "" },
+  { "id": 27, "testName": "Холестерин ЛПВЩ",      "value": 1.3,   "unit": "ммоль/л", "referenceRange": ">1.0",    "isAbnormal": false, "testDate": "2025-11-18T00:00:00Z", "patientName": "" },
+  { "id": 28, "testName": "Тригліцериди",         "value": 1.4,   "unit": "ммоль/л", "referenceRange": "<1.7",    "isAbnormal": false, "testDate": "2025-11-18T00:00:00Z", "patientName": "" }
+]

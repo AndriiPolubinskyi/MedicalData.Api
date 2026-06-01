@@ -28,6 +28,7 @@ public class GroqLabAiService : ILabAiService
         - Никаких латинских аббревиатур: не "LDL" — а "холестерин ЛПНЩ (плохой холестерин)".
         - Язык простой, понятный человеку без медицинского образования.
         - В конце — блок ОБЩИЙ ВЫВОД: 1–3 предложения о том, на что обратить внимание.
+        - Последнее предложение ОБЩЕГО ВЫВОДА всегда: "Ця інформація є загальноосвітньою і не замінює консультацію лікаря."
         """;
 
     private readonly HttpClient _http;
@@ -151,21 +152,24 @@ public class GroqLabAiService : ILabAiService
         var (systemPrompt, userMessage) = lang switch
         {
             "en" => (
-                "You are a medical assistant. Explain a single lab result to a patient in plain English. " +
-                "2-3 sentences max: what this test measures, and what the current value means for health. " +
-                "If abnormal, explain what it may indicate. No bullet points, no markdown, plain text only.",
+                "You are a medical information assistant. Explain a single lab result to a patient in plain English. " +
+                "2-3 sentences: what this test measures, and what the current value may suggest. " +
+                "If abnormal, explain what it may be associated with. No bullet points, no markdown, plain text only. " +
+                "Always end with: \"This is general information only and is not a substitute for professional medical advice.\"",
                 $"Test: {testName}\nValue: {value} {unit}\nReference range: {referenceRange}\nStatus: {(isAbnormal ? "ABNORMAL" : "normal")}"
             ),
             "ru" => (
-                "Ты медицинский ассистент. Объясни один показатель анализа пациенту простым языком. " +
-                "Максимум 2-3 предложения: что измеряет этот показатель и что означает текущее значение. " +
-                "Если отклонение — скажи что это может означать. Без списков, без markdown, только обычный текст.",
+                "Ты информационный медицинский ассистент. Объясни один показатель анализа пациенту простым языком. " +
+                "2-3 предложения: что измеряет этот показатель и о чём может говорить текущее значение. " +
+                "Если отклонение — скажи с чем это может быть связано. Без списков, без markdown, только обычный текст. " +
+                "Всегда заканчивай словами: «Ця інформація є загальноосвітньою і не замінює консультацію лікаря.»",
                 $"Показатель: {testName}\nЗначение: {value} {unit}\nНорма: {referenceRange}\nСтатус: {(isAbnormal ? "ОТКЛОНЕНИЕ" : "в норме")}"
             ),
             _ => (
-                "Ти медичний асистент. Поясни один показник аналізу пацієнту простою мовою. " +
-                "Максимум 2-3 речення: що вимірює цей показник і що означає поточне значення. " +
-                "Якщо відхилення — скажи що це може означати. Без списків, без markdown, тільки звичайний текст.",
+                "Ти інформаційний медичний асистент. Поясни один показник аналізу пацієнту простою мовою. " +
+                "2-3 речення: що вимірює цей показник і про що може свідчити поточне значення. " +
+                "Якщо відхилення — скажи з чим це може бути пов'язано. Без списків, без markdown, тільки звичайний текст. " +
+                "Завжди закінчуй словами: «Ця інформація є загальноосвітньою і не замінює консультацію лікаря.»",
                 $"Показник: {testName}\nЗначення: {value} {unit}\nНорма: {referenceRange}\nСтатус: {status}"
             )
         };
@@ -179,7 +183,7 @@ public class GroqLabAiService : ILabAiService
                 new { role = "user",   content = userMessage  }
             },
             temperature = 0.3,
-            max_tokens  = 200
+            max_tokens  = 250
         };
 
         var json = JsonSerializer.Serialize(requestBody, JsonOptions);

@@ -1,4 +1,5 @@
 @page "/"
+@page "/demo"
 @layout BlankLayout
 @implements IDisposable
 @using MedicalData.Client.Models
@@ -12,229 +13,356 @@
 @inject AuthService Auth
 @inject AuthStateProvider AuthState
 @inject LocalizationService Loc
-@attribute [Authorize]
 
-<div class="app">
+<div class="page-shell">
 
-    <!-- ── Topbar ────────────────────────────────────────── -->
-    <header class="topbar">
-        <div class="topbar-inner">
-            <div class="brand">🩺 @Loc["brand"]</div>
+    <!-- ══ NAV ══════════════════════════════════════════ -->
+    <nav class="nav">
+        <div class="nav-inner">
+            <div class="nav-brand">
+                <div class="nav-brand-icon">❤️</div>
+                <span>Medical AI</span>
+            </div>
 
-            <nav class="tab-nav">
-                <button class="tab-pill @Active(Tab.Dashboard)" @onclick="() => tab = Tab.Dashboard">🏠 @Loc["tab.dashboard"]</button>
-                <button class="tab-pill @Active(Tab.Upload)"    @onclick="() => tab = Tab.Upload">📄 @Loc["tab.upload"]</button>
-                <button class="tab-pill @Active(Tab.History)"   @onclick="() => tab = Tab.History">📅 @Loc["tab.history"]</button>
-                <button class="tab-pill @Active(Tab.Charts)"    @onclick="() => tab = Tab.Charts">📈 @Loc["tab.charts"]</button>
-            </nav>
+            <div class="nav-links">
+                <button class="nav-link @(pageView == PageView.Main    ? "active" : "")" @onclick="() => pageView = PageView.Main">🏠 @Loc["tab.dashboard"]</button>
+                <button class="nav-link @(pageView == PageView.History ? "active" : "")" @onclick="() => pageView = PageView.History">📅 @Loc["tab.history"]</button>
+                <button class="nav-link @(pageView == PageView.Charts  ? "active" : "")" @onclick="() => pageView = PageView.Charts">📈 @Loc["tab.charts"]</button>
+            </div>
 
-            <div class="topbar-right">
+            <div class="nav-right">
                 <div class="lang-switcher">
                     <button class="lang-btn @(Loc.Lang == "uk" ? "active" : "")" @onclick='() => SwitchLangAsync("uk")'>UA</button>
                     <button class="lang-btn @(Loc.Lang == "en" ? "active" : "")" @onclick='() => SwitchLangAsync("en")'>EN</button>
                     <button class="lang-btn @(Loc.Lang == "ru" ? "active" : "")" @onclick='() => SwitchLangAsync("ru")'>RU</button>
                 </div>
-                @if (userPic != null)
+                @if (!isDemo)
                 {
-                    <img src="@userPic" class="user-avatar" alt="" />
+                    @if (userPic != null)  { <img src="@userPic" class="user-avatar" alt="" /> }
+                    @if (userName != null) { <span class="nav-user-name">@userName</span> }
+                    <button class="nav-logout-btn" @onclick="LogoutAsync">@Loc["logout"]</button>
                 }
-                @if (userName != null)
+                else
                 {
-                    <span class="topbar-username">@userName</span>
+                    <button class="nav-signin-btn" @onclick='() => Nav.NavigateTo("/login")'>@Loc["demo.login"] →</button>
                 }
-                <button class="logout-btn" @onclick="LogoutAsync">@Loc["logout"]</button>
             </div>
         </div>
-    </header>
+    </nav>
 
-    <!-- ── Main content ──────────────────────────────────── -->
-    <main class="main-wrap">
+    <!-- ══ CONTENT ══════════════════════════════════════ -->
+    <div class="page-content">
+
+        @if (isDemo)
+        {
+            <div class="demo-banner">
+                🔍 @Loc["demo.banner"]
+                <a href="/login">@Loc["demo.login"] →</a>
+            </div>
+        }
 
         @if (loadError != null)
         {
-            <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:14px 16px;color:#991b1b;margin-bottom:20px;">
-                ⚠ @loadError
-            </div>
+            <div class="error-bar">⚠ @loadError</div>
         }
 
-        <!-- ══════════════════════════════════════════
-             DASHBOARD
-             ══════════════════════════════════════════ -->
-        @if (tab == Tab.Dashboard)
+        <!-- ══ MAIN PAGE ══════════════════════════════════ -->
+        @if (pageView == PageView.Main)
         {
-            @if (historyByDate is null)
+            @if (historyByDate is null && parsedResults is null)
             {
+                <!-- Loading -->
                 <div class="loading-row"><FluentProgressRing Style="width:22px;height:22px;" /> @Loc["loading"]</div>
             }
-            else if (historyByDate.Count == 0)
+            else if (!HasData && parsedResults is null)
             {
-                <div class="card" style="text-align:center;padding:48px 24px;">
-                    <div style="font-size:52px;margin-bottom:14px;">🩺</div>
-                    <p style="color:#475569;font-size:15px;margin:0 0 20px;">@Loc["empty.noData"]</p>
-                    <button class="ai-btn" @onclick="() => tab = Tab.Upload">@Loc["empty.upload"]</button>
-                </div>
-            }
-            else
-            {
-                <div class="dash-grid">
-                    <div class="stat-card">
-                        <div class="stat-label">@Loc["stat.lastDate"]</div>
-                        <div class="stat-value" style="font-size:17px;">@lastDateStr</div>
+                <!-- ── HERO ────────────────────────────── -->
+                <section class="hero">
+                    <div class="hero-left">
+                        <div class="hero-eyebrow">✨ AI-аналіз</div>
+                        <h1 class="hero-title">Розшифруйте свої аналізи за допомогою <span>AI</span></h1>
+                        <p class="hero-sub">Завантажте PDF з лабораторними результатами та отримайте зрозуміле пояснення кожного показника.</p>
+                        <div class="hero-actions">
+                            @if (!isDemo)
+                            {
+                                <label class="btn-hero" style="cursor:pointer;position:relative;overflow:hidden;">
+                                    <span>📎</span>
+                                    <span>@(isParsing ? Loc["upload.parsing"] : Loc["upload.parse"])</span>
+                                    <InputFile OnChange="OnFileSelected" accept=".pdf,application/pdf"
+                                               style="position:absolute;inset:0;opacity:0;cursor:pointer;" />
+                                </label>
+                                @if (selectedFile != null && !isParsing)
+                                {
+                                    <button class="btn-hero" @onclick="ParsePdfAsync" disabled="@isParsing">
+                                        <span>🔍</span> @Loc["upload.parse"]
+                                    </button>
+                                }
+                            }
+                            <p class="hero-labs">Підтримуються Synevo, Діла, CSD, Invivo та інші лабораторії</p>
+                        </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-label">@Loc["stat.totalCount"]</div>
-                        <div class="stat-value">@totalCount</div>
-                    </div>
-                    <div class="@(abnormalCount > 0 ? "stat-card stat-card-warn" : "stat-card")">
-                        <div class="stat-label">@Loc["stat.abnCount"]</div>
-                        <div class="stat-value">@(abnormalCount > 0 ? $"⚠ {abnormalCount}" : Loc["stat.normal"])</div>
-                    </div>
-                </div>
 
-                @if (categoryCards is { Count: > 0 })
-                {
-                    <p class="section-title">@Loc["section.categories"]</p>
-                    <div class="cat-grid">
-                        @foreach (var cat in categoryCards)
-                        {
-                            <div class="cat-card @(cat.HasAbnormal ? "cat-card-warn" : "")"
-                                 @onclick="() => OpenCategoryHistory(cat.Name)">
-                                <div class="cat-header">
-                                    <div class="cat-icon-bubble" style="@CatBubbleStyle(cat.Name)">@cat.Icon</div>
-                                    <div class="cat-info">
-                                        <div class="cat-name">@Loc.GetGroupName(cat.Name)</div>
-                                        <div class="cat-date">@Loc.FormatDate(cat.LastDate)</div>
-                                    </div>
+                    <div class="hero-visual">
+                        <div class="hero-glow"></div>
+                        <div class="hero-float-badge badge-warn">
+                            <div class="badge-label">Холестерин</div>
+                            <div class="badge-val" style="color:#F59E0B">6.4 ммоль/л ⚠</div>
+                        </div>
+                        <div class="hero-pdf-card">
+                            <div class="hero-pdf-header">
+                                <div class="hero-pdf-icon">📄</div>
+                                <div>
+                                    <div class="hero-pdf-title">Результати аналізів</div>
+                                    <div class="hero-pdf-sub">Synevo • 15.01.2025</div>
                                 </div>
-                                <div class="cat-footer">
-                                    <span style="font-size:11px;color:#64748b;">@cat.Count @Loc["cat.count"]</span>
-                                    @if (cat.AbnormalCount > 0)
-                                    {
-                                        <span class="chip chip-warn" style="font-size:10px;padding:1px 6px;">⚠ @cat.AbnormalCount</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="chip chip-ok" style="font-size:10px;padding:1px 6px;">✓</span>
-                                    }
-                                </div>
-                                <svg class="sparkline" viewBox="0 0 100 30" preserveAspectRatio="none">
-                                    <polyline points="@cat.SparkPoints"
-                                              fill="none"
-                                              stroke="@(cat.HasAbnormal ? "#f59e0b" : GetCatColors(cat.Name).fg)"
-                                              stroke-width="2.5"
-                                              stroke-linejoin="round"
-                                              stroke-linecap="round" />
-                                </svg>
                             </div>
-                        }
+                            <div class="hero-metric-row">
+                                <span class="hero-metric-name">Гемоглобін</span>
+                                <span class="hero-metric-val ok">138 г/л</span>
+                            </div>
+                            <div class="hero-metric-row">
+                                <span class="hero-metric-name">Лейкоцити</span>
+                                <span class="hero-metric-val warn">9.8 10⁹/л</span>
+                            </div>
+                            <div class="hero-metric-row">
+                                <span class="hero-metric-name">АЛТ</span>
+                                <span class="hero-metric-val err">52 Од/л</span>
+                            </div>
+                            <div class="hero-metric-row">
+                                <span class="hero-metric-name">Глюкоза</span>
+                                <span class="hero-metric-val ok">5.8 ммоль/л</span>
+                            </div>
+                        </div>
+                        <div class="hero-float-badge badge-ai">
+                            <div class="badge-label">AI висновок</div>
+                            <div class="badge-val" style="color:#a5b4fc">Готовий ✓</div>
+                        </div>
+                        <div class="hero-float-badge badge-ok">
+                            <div class="badge-label">Норма</div>
+                            <div class="badge-val" style="color:#22C55E">24 показники ✓</div>
+                        </div>
                     </div>
-                }
-
-                <p class="section-title">@Loc["section.aiSummary"]</p>
-                <button class="ai-btn" @onclick="GetDashAiSummaryAsync" disabled="@isDashAiLoading">
-                    @(isDashAiLoading ? Loc["ai.loading"] : Loc["ai.btn"])
-                </button>
-                @if (isDashAiLoading)
-                {
-                    <div class="ai-card loading-row" style="margin-top:12px;">
-                        <FluentProgressRing Style="width:18px;height:18px;" /> @Loc["generating"]
-                    </div>
-                }
-                else if (!string.IsNullOrWhiteSpace(dashAiSummary))
-                {
-                    <div class="ai-card" style="margin-top:12px;">
-                        <div class="ai-card-header">@Loc["ai.header"]</div>
-                        <div class="ai-card-body">@dashAiSummary</div>
-                    </div>
-                }
-            }
-        }
-
-        <!-- ══════════════════════════════════════════
-             UPLOAD
-             ══════════════════════════════════════════ -->
-        @if (tab == Tab.Upload)
-        {
-            <div class="card">
-                <h2 class="card-title">@Loc["upload.title"]</h2>
-
-                <label class="drop-zone">
-                    <div class="dz-icon">📎</div>
-                    <div class="dz-label">@(selectedFile?.Name ?? Loc["upload.choose"])</div>
-                    <div class="dz-hint">@Loc["upload.hint"]</div>
-                    <InputFile OnChange="OnFileSelected" accept=".pdf,application/pdf"
-                               style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;" />
-                </label>
-
-                <div class="row-gap" style="margin-top:16px;">
-                    <FluentButton Appearance="Appearance.Accent" OnClick="ParsePdfAsync"
-                                  Disabled="@(selectedFile is null || isParsing)" Style="min-width:160px;">
-                        @(isParsing ? Loc["upload.parsing"] : Loc["upload.parse"])
-                    </FluentButton>
-                    @if (parsedResults is { Count: > 0 })
-                    {
-                        <FluentButton Appearance="Appearance.Outline" OnClick="SaveAsync"
-                                      Disabled="@isSaving" Style="min-width:160px;">
-                            @(isSaving ? Loc["upload.saving"] : Loc["upload.save"])
-                        </FluentButton>
-                    }
-                </div>
+                </section>
 
                 @if (!string.IsNullOrWhiteSpace(uploadMsg))
                 {
-                    <p class="@(uploadError ? "msg-error" : "msg-ok")" style="margin-top:10px;">@uploadMsg</p>
+                    <p class="@(uploadError ? "msg-err" : "msg-ok")" style="text-align:center;">@uploadMsg</p>
+                }
+            }
+            else
+            {
+                <!-- ── RESULTS VIEW (has data or parsedResults) ── -->
+
+                @if (!isDemo)
+                {
+                    <!-- Compact upload bar -->
+                    <div class="upload-compact-bar">
+                        <span style="font-size:18px;">📎</span>
+                        <span class="upload-file-name">@(selectedFile?.Name ?? Loc["upload.choose"])</span>
+                        <label class="btn-ghost" style="cursor:pointer;position:relative;overflow:hidden;">
+                            @Loc["upload.choose"]
+                            <InputFile OnChange="OnFileSelected" accept=".pdf,application/pdf"
+                                       style="position:absolute;inset:0;opacity:0;cursor:pointer;" />
+                        </label>
+                        @if (selectedFile != null)
+                        {
+                            <button class="btn-primary" @onclick="ParsePdfAsync" disabled="@isParsing">
+                                @(isParsing ? Loc["upload.parsing"] : Loc["upload.parse"])
+                            </button>
+                        }
+                        @if (parsedResults is { Count: > 0 })
+                        {
+                            <button class="btn-primary" @onclick="SaveAsync" disabled="@isSaving">
+                                💾 @(isSaving ? Loc["upload.saving"] : Loc["upload.save"])
+                            </button>
+                        }
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(uploadMsg))
+                    {
+                        <p class="@(uploadError ? "msg-err" : "msg-ok")">@uploadMsg</p>
+                    }
                 }
 
-                @if (parsedResults is { Count: > 0 })
-                {
-                    <div class="summary-bar">
-                        <span>📅 <strong>@Loc.FormatDate(parsedDate ?? DateTime.Today)</strong></span>
-                        <span class="chip chip-ok">@parsedResults.Count @Loc["tbl.indicator"]</span>
-                        @if (parsedResults.Any(x => x.IsAbnormal))
+                <!-- ── STATS ──────────────────────────── -->
+                <div class="stats-row" style="margin-bottom:28px;">
+                    <div class="stat-card">
+                        <div class="stat-label">@Loc["stat.lastDate"]</div>
+                        <div class="stat-value" style="font-size:18px;">@(CurrentDate.HasValue ? Loc.FormatDate(CurrentDate.Value) : "—")</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">@Loc["stat.totalCount"]</div>
+                        <div class="stat-value">@CurrentItems?.Count</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">@Loc["stat.abnCount"]</div>
+                        <div class="stat-value @(CurrentAbnormal?.Count > 0 ? "warn" : "ok")">
+                            @(CurrentAbnormal?.Count > 0 ? $"⚠ {CurrentAbnormal.Count}" : Loc["stat.normal"])
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── AI CONCLUSION ──────────────────── -->
+                <div class="ai-conclusion-card">
+                    <div class="ai-conclusion-header">
+                        <div class="ai-conclusion-icon">🤖</div>
+                        <div class="ai-conclusion-title">AI висновок</div>
+                        <div class="ai-conclusion-badge">AI</div>
+                    </div>
+                    @if (CurrentSummaryLoading)
+                    {
+                        <div class="loading-row"><FluentProgressRing Style="width:18px;height:18px;" /> @Loc["generating"]</div>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(CurrentSummary))
+                    {
+                        <div class="ai-conclusion-text">@(showFullSummary ? CurrentSummary : FirstParagraph(CurrentSummary))</div>
+                    }
+                    else
+                    {
+                        <div class="ai-conclusion-placeholder">
+                            @if (CurrentAbnormal?.Count > 0)
+                            {
+                                @($"Виявлено {CurrentAbnormal.Count} відхилень від норми. Натисніть для повного AI-аналізу.")
+                            }
+                            else
+                            {
+                                @("Показники в нормі. Натисніть для детального AI-аналізу.")
+                            }
+                        </div>
+                    }
+                    <div class="ai-conclusion-actions">
+                        @if (!CurrentSummaryLoading && string.IsNullOrWhiteSpace(CurrentSummary))
                         {
-                            <span class="chip chip-warn">⚠ @parsedResults.Count(x => x.IsAbnormal)</span>
+                            <button class="btn-primary" @onclick="GetCurrentAiSummaryAsync">🤖 @Loc["ai.btn"]</button>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(CurrentSummary) && !CurrentSummaryLoading)
+                        {
+                            <button class="btn-ghost" @onclick="() => showFullSummary = !showFullSummary">
+                                @(showFullSummary ? "Згорнути" : "Читати повний висновок")
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <!-- ── KEY DEVIATIONS ─────────────────── -->
+                @if (CurrentAbnormal is { Count: > 0 })
+                {
+                    <section class="deviations-section">
+                        <div class="section-header">
+                            <div>
+                                <div class="section-title">⚠ Ключові відхилення</div>
+                                <div class="section-sub">@CurrentAbnormal.Count показника(ів) поза нормою</div>
+                            </div>
+                        </div>
+                        <div class="deviation-grid">
+                            @foreach (var item in CurrentAbnormal)
+                            {
+                                var dvClass = GetDeviationClass(item.Value, item.ReferenceRange);
+                                var explainKey = item.TestName;
+                                var isExpLoading = displayExplainLoading.Contains(explainKey);
+                                displayExplainTexts.TryGetValue(explainKey, out var explainText);
+                                <div class="deviation-card @dvClass">
+                                    <div class="deviation-icon">@GetTestIcon(item.TestName)</div>
+                                    <div class="deviation-name">@item.TestName</div>
+                                    <div class="deviation-value">@item.Value.ToString("G6")</div>
+                                    <div class="deviation-unit">@item.Unit</div>
+                                    @if (!string.IsNullOrWhiteSpace(item.ReferenceRange))
+                                    {
+                                        <div class="deviation-range">
+                                            <span class="deviation-range-label">Норма</span>
+                                            <span class="deviation-range-val">@item.ReferenceRange</span>
+                                        </div>
+                                    }
+                                    <div class="deviation-status">@GetDeviationLabel(item.Value, item.ReferenceRange)</div>
+                                    <button class="btn-explain" @onclick="() => ExplainDisplayItemAsync(item)" disabled="@isExpLoading">
+                                        @(isExpLoading ? "⏳ Генерую..." : (explainText != null ? "✕ Закрити" : "🤖 Пояснити"))
+                                    </button>
+                                    @if (!string.IsNullOrWhiteSpace(explainText))
+                                    {
+                                        <div class="explain-bubble">
+                                            @explainText
+                                            <button class="explain-close-btn" @onclick="() => displayExplainTexts.Remove(explainKey)">✕</button>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </section>
+                }
+
+                <!-- ── ALL INDICATORS ─────────────────── -->
+                <section class="indicators-section">
+                    <div class="section-header">
+                        <div>
+                            <div class="section-title">Усі показники</div>
+                            <div class="section-sub">@CurrentItems?.Count показника(ів) · @(CurrentDate.HasValue ? Loc.FormatDate(CurrentDate.Value) : "")</div>
+                        </div>
+                        @if (!isDemo && HasData && parsedResults == null)
+                        {
+                            <div style="display:flex;gap:8px;">
+                                <button class="btn-ghost" @onclick='() => OpenShare("latest")'>@Loc["share.latest"]</button>
+                                <button class="btn-ghost" @onclick='() => OpenShare("all")'>@Loc["share.all"]</button>
+                            </div>
                         }
                     </div>
 
-                    <div style="overflow-x:auto; margin-top:12px;">
-                        <table class="data-table">
+                    @if (!isDemo && shareUrl != null)
+                    {
+                        <div class="share-card">
+                            <span style="font-size:14px;color:#a5b4fc;">🔗</span>
+                            <code class="share-url">@shareUrl</code>
+                            <button class="btn-ghost" @onclick="CopyShare">@Loc["share.copy"]</button>
+                            <button class="btn-ghost" @onclick="() => shareUrl = null">✕</button>
+                        </div>
+                    }
+
+                    <div class="indicators-table-wrap">
+                        <table class="indicators-table">
                             <thead>
                                 <tr>
                                     <th>@Loc["tbl.indicator"]</th>
                                     <th class="right">@Loc["tbl.value"]</th>
                                     <th>@Loc["tbl.unit"]</th>
                                     <th>@Loc["tbl.range"]</th>
-                                    <th class="center">⚠</th>
+                                    <th class="center">Статус</th>
                                     <th class="center">AI</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var m in parsedResults.OrderBy(x => x.TestName))
+                                @foreach (var item in CurrentItems?.OrderBy(x => x.TestName) ?? Enumerable.Empty<DisplayItem>())
                                 {
-                                    var uploadKey = m.TestName;
-                                    var isExplaining = uploadExplainLoading.Contains(uploadKey);
-                                    uploadExplainTexts.TryGetValue(uploadKey, out var explainText);
-                                    <tr class="@(m.IsAbnormal ? "row-warn" : "")">
-                                        <td>@m.TestName</td>
-                                        <td class="right @(m.IsAbnormal ? "val-warn" : "val-ok")">@m.Value.ToString("G6")</td>
-                                        <td class="muted">@m.Unit</td>
-                                        <td class="muted">@m.ReferenceRange</td>
-                                        <td class="center">@(m.IsAbnormal ? "⚠️" : "✓")</td>
+                                    var ek = item.TestName;
+                                    var isEL = displayExplainLoading.Contains(ek);
+                                    displayExplainTexts.TryGetValue(ek, out var et);
+                                    <tr class="@(item.IsAbnormal ? "row-abn" : "")">
+                                        <td class="test-name">@item.TestName</td>
+                                        <td class="right @(item.IsAbnormal ? "val-warn" : "val-ok")">@item.Value.ToString("G6")</td>
+                                        <td class="muted">@item.Unit</td>
+                                        <td class="muted">@item.ReferenceRange</td>
                                         <td class="center">
-                                            <button class="explain-btn @(m.IsAbnormal ? "explain-btn-warn" : "")"
-                                                    @onclick="() => ExplainUploadAsync(m)"
-                                                    disabled="@isExplaining"
-                                                    title="@Loc["ai.explain"]">
-                                                @(isExplaining ? "⏳" : "🤖")
+                                            @if (item.IsAbnormal)
+                                            {
+                                                <span class="status-chip warn">⚠ Відхилення</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="status-chip ok">✓ Норма</span>
+                                            }
+                                        </td>
+                                        <td class="center">
+                                            <button class="btn-explain-sm" @onclick="() => ExplainDisplayItemAsync(item)" disabled="@isEL" title="@Loc["ai.explain"]">
+                                                @(isEL ? "⏳" : "🤖")
                                             </button>
                                         </td>
                                     </tr>
-                                    @if (!string.IsNullOrWhiteSpace(explainText))
+                                    @if (!string.IsNullOrWhiteSpace(et))
                                     {
-                                        <tr class="explain-row">
-                                            <td colspan="6" class="explain-cell">
-                                                <span class="explain-icon">🤖</span> @explainText
-                                                <button class="explain-close" @onclick="() => uploadExplainTexts.Remove(uploadKey)">✕</button>
+                                        <tr class="tbl-explain-row">
+                                            <td colspan="6">
+                                                <div class="tbl-explain-cell">
+                                                    <span>🤖</span>
+                                                    <span style="flex:1;">@et</span>
+                                                    <button class="explain-close-btn" @onclick="() => displayExplainTexts.Remove(ek)">✕</button>
+                                                </div>
                                             </td>
                                         </tr>
                                     }
@@ -242,237 +370,221 @@
                             </tbody>
                         </table>
                     </div>
+                </section>
 
-                    <div style="margin-top:14px;">
-                        <button class="ai-btn" @onclick="GetUploadAiSummaryAsync" disabled="@isUploadAiLoading">
-                            @(isUploadAiLoading ? Loc["ai.loading"] : Loc["ai.analyze"])
-                        </button>
-                    </div>
-
-                    @if (isUploadAiLoading)
-                    {
-                        <div class="ai-card loading-row" style="margin-top:12px;">
-                            <FluentProgressRing Style="width:18px;height:18px;" /> @Loc["generating"]
-                        </div>
-                    }
-                    else if (!string.IsNullOrWhiteSpace(uploadAiSummary))
-                    {
-                        <div class="ai-card">
-                            <div class="ai-card-header">@Loc["ai.header"]</div>
-                            <div class="ai-card-body">@uploadAiSummary</div>
-                        </div>
-                    }
-                }
-            </div>
-        }
-
-        <!-- ══════════════════════════════════════════
-             HISTORY
-             ══════════════════════════════════════════ -->
-        @if (tab == Tab.History)
-        {
-            <div class="card">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:14px;border-bottom:1px solid #f1f5f9;flex-wrap:wrap;gap:8px;">
-                    <h2 style="margin:0;font-size:17px;font-weight:700;color:#1e293b;">@Loc["history.title"]</h2>
-                    <div style="display:flex;gap:8px;">
-                        <button class="ai-btn" @onclick='() => OpenShare("latest")'>@Loc["share.latest"]</button>
-                        <button class="ai-btn" @onclick='() => OpenShare("all")'>@Loc["share.all"]</button>
-                    </div>
-                </div>
-
-                @if (filterCategory != null)
+                <!-- ── CATEGORY CARDS (from history) ─── -->
+                @if (HasData && categoryCards is { Count: > 0 } && parsedResults == null)
                 {
-                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 12px;">
-                        <span style="font-size:13px;color:#1d4ed8;">🔍 @Loc["filter.label"] <strong>@Loc.GetGroupName(filterCategory)</strong></span>
-                        <button @onclick="() => filterCategory = null"
-                                style="margin-left:auto;background:none;border:none;cursor:pointer;color:#64748b;font-size:16px;line-height:1;padding:0 2px;">✕</button>
+                    <div class="section-header" style="margin-top:40px;">
+                        <div class="section-title">@Loc["section.categories"]</div>
                     </div>
-                }
-
-                @if (shareUrl != null)
-                {
-                    <div class="ai-card" style="margin-bottom:16px;">
-                        <div class="ai-card-header">🔗 @(shareScope == "latest" ? Loc["share.latestScope"] : Loc["share.allScope"])</div>
-                        <div class="ai-card-body" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                            <code style="flex:1;word-break:break-all;">@shareUrl</code>
-                            <button class="ai-btn" @onclick="CopyShare">@Loc["share.copy"]</button>
-                            <button class="ai-btn" @onclick="() => shareUrl = null">✕</button>
-                        </div>
-                    </div>
-                }
-
-                @if (historyByDate is null)
-                {
-                    <div class="loading-row"><FluentProgressRing Style="width:22px;height:22px;" /> @Loc["loading"]</div>
-                }
-                else
-                {
-                    var displayHistory = filterCategory is null
-                        ? historyByDate
-                        : historyByDate
-                            .Select(kv => new KeyValuePair<DateTime, List<LabResult>>(
-                                kv.Key,
-                                kv.Value.Where(r => GetLabGroup(r.TestName) == filterCategory).ToList()))
-                            .Where(kv => kv.Value.Count > 0)
-                            .ToDictionary(kv => kv.Key, kv => kv.Value);
-
-                    @if (displayHistory.Count == 0)
-                    {
-                        <p class="muted">@(filterCategory != null
-                            ? Loc.Format("history.emptyCategory", Loc.GetGroupName(filterCategory))
-                            : Loc["history.empty"])</p>
-                    }
-                    else
-                    {
-                        var byYear = displayHistory
-                            .OrderByDescending(kv => kv.Key)
-                            .GroupBy(kv => kv.Key.Year)
-                            .ToList();
-
-                        @foreach (var yearGroup in byYear)
+                    <div class="cat-grid">
+                        @foreach (var cat in categoryCards)
                         {
-                            <div class="tl-year-block">
-                                <div class="tl-year-header">@yearGroup.Key</div>
-                                <div class="tl-table">
-                                    <div class="tl-col-head">
-                                        <span class="tl-col-date">@Loc["col.date"]</span>
-                                        <span class="tl-col-count">@Loc["col.indicators"]</span>
-                                        <span class="tl-col-warn">@Loc["col.deviations"]</span>
-                                        <span class="tl-col-actions"></span>
-                                    </div>
-
-                                    @foreach (var (date, items) in yearGroup.OrderByDescending(kv => kv.Key))
-                                    {
-                                        var isOpen     = openDates.Contains(date);
-                                        var abnCount   = items.Count(x => x.IsAbnormal);
-                                        var hasSumm    = aiSummaries.TryGetValue(date, out var summ);
-                                        var isLoading  = loadingAi.Contains(date);
-                                        var isDeleting = deletingDates.Contains(date);
-
-                                        <div class="tl-row @(isOpen ? "tl-row-open" : "")" @onclick="() => ToggleDate(date)">
-                                            <span class="tl-col-date">
-                                                <span class="tl-chevron">@(isOpen ? "▾" : "▸")</span>
-                                                @Loc.ShortDate(date)
-                                            </span>
-                                            <span class="tl-col-count">
-                                                <span class="chip chip-ok">@items.Count</span>
-                                            </span>
-                                            <span class="tl-col-warn">
-                                                @if (abnCount > 0)
-                                                {
-                                                    <span class="chip chip-warn">⚠ @abnCount</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="tl-ok-mark">✓</span>
-                                                }
-                                            </span>
-                                            <span class="tl-col-actions" @onclick:stopPropagation="true" style="display:flex;gap:4px;">
-                                                <button class="ai-btn" @onclick="() => GetAiSummaryAsync(date, items)"
-                                                        disabled="@isLoading">
-                                                    @(isLoading ? "⏳" : Loc["ai.short"])
-                                                </button>
-                                                <button class="ai-btn" style="color:#dc2626;"
-                                                        @onclick="() => DeleteByDateAsync(date)"
-                                                        disabled="@isDeleting" title="@Loc.Format("delete.confirm", Loc.ShortDate(date), date.Year)">
-                                                    @(isDeleting ? "⏳" : "🗑️")
-                                                </button>
-                                            </span>
-                                        </div>
-
-                                        @if (isOpen)
-                                        {
-                                            <div class="tl-detail">
-                                                <div style="overflow-x:auto;">
-                                                    <table class="data-table compact">
-                                                        <thead>
-                                                            <tr>
-                                                                <th>@Loc["tbl.indicator"]</th>
-                                                                <th class="right">@Loc["tbl.value"]</th>
-                                                                <th>@Loc["tbl.unit"]</th>
-                                                                <th>@Loc["tbl.range"]</th>
-                                                                <th class="center">⚠</th>
-                                                                <th class="center">AI</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            @foreach (var r in items.OrderBy(x => x.TestName))
-                                                            {
-                                                                var explainKey = r.Id;
-                                                                var isExplaining = explainLoading.Contains(explainKey);
-                                                                explainTexts.TryGetValue(explainKey, out var explainText);
-                                                                <tr class="@(r.IsAbnormal ? "row-warn" : "")">
-                                                                    <td>@r.TestName</td>
-                                                                    <td class="right @(r.IsAbnormal ? "val-warn" : "")">@r.Value.ToString("G6")</td>
-                                                                    <td class="muted">@r.Unit</td>
-                                                                    <td class="muted">@r.ReferenceRange</td>
-                                                                    <td class="center">@(r.IsAbnormal ? "⚠️" : "✓")</td>
-                                                                    <td class="center">
-                                                                        <button class="explain-btn @(r.IsAbnormal ? "explain-btn-warn" : "")"
-                                                                                @onclick="() => ExplainAsync(r)"
-                                                                                disabled="@isExplaining"
-                                                                                title="@Loc["ai.explain"]">
-                                                                            @(isExplaining ? "⏳" : "🤖")
-                                                                        </button>
-                                                                    </td>
-                                                                </tr>
-                                                                @if (!string.IsNullOrWhiteSpace(explainText))
-                                                                {
-                                                                    <tr class="explain-row">
-                                                                        <td colspan="6" class="explain-cell">
-                                                                            <span class="explain-icon">🤖</span> @explainText
-                                                                            <button class="explain-close" @onclick="() => explainTexts.Remove(explainKey)">✕</button>
-                                                                        </td>
-                                                                    </tr>
-                                                                }
-                                                            }
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-
-                                                @if (isLoading)
-                                                {
-                                                    <div class="ai-card loading-row" style="margin-top:12px;">
-                                                        <FluentProgressRing Style="width:18px;height:18px;" /> @Loc["generating"]
-                                                    </div>
-                                                }
-                                                else if (hasSumm && !string.IsNullOrWhiteSpace(summ))
-                                                {
-                                                    <div class="ai-card">
-                                                        <div class="ai-card-header">@Loc["ai.header"]</div>
-                                                        <div class="ai-card-body">@summ</div>
-                                                    </div>
-                                                }
-                                            </div>
-                                        }
-                                    }
+                            var (catBg, catFg) = GetCatColors(cat.Name);
+                            <div class="cat-card @(cat.HasAbnormal ? "cat-card-warn" : "")"
+                                 @onclick="() => OpenCategoryHistory(cat.Name)">
+                                <div class="cat-svg-icon" style="background:@catBg;color:@catFg;">
+                                    @GetGroupSvg(cat.Name)
+                                </div>
+                                <div class="cat-name">@Loc.GetGroupName(cat.Name)</div>
+                                <div class="cat-date">@Loc.FormatDate(cat.LastDate)</div>
+                                <div class="cat-footer">
+                                    <span style="font-size:11px;color:var(--text-muted);">@cat.Count @Loc["cat.count"]</span>
+                                    @if (cat.AbnormalCount > 0) { <span class="chip chip-warn">⚠ @cat.AbnormalCount</span> }
+                                    else { <span class="chip chip-ok">✓</span> }
                                 </div>
                             </div>
                         }
-                    }
+                    </div>
                 }
-            </div>
+            }
         }
 
-        <!-- ══════════════════════════════════════════
-             CHARTS
-             ══════════════════════════════════════════ -->
-        @if (tab == Tab.Charts)
+        <!-- ══ HISTORY PAGE ═══════════════════════════════ -->
+        @if (pageView == PageView.History)
         {
-            <div class="card">
-                <h2 class="card-title">@Loc["charts.title"]</h2>
+            <div class="section-header" style="padding-top:32px;">
+                <div>
+                    <div class="section-title">@Loc["history.title"]</div>
+                    @if (filterCategory != null)
+                    {
+                        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+                            <span style="font-size:13px;color:#a5b4fc;">🔍 @Loc.GetGroupName(filterCategory)</span>
+                            <button @onclick="() => filterCategory = null" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;">✕</button>
+                        </div>
+                    }
+                </div>
+                @if (!isDemo)
+                {
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn-ghost" @onclick='() => OpenShare("latest")'>@Loc["share.latest"]</button>
+                        <button class="btn-ghost" @onclick='() => OpenShare("all")'>@Loc["share.all"]</button>
+                    </div>
+                }
+            </div>
 
+            @if (!isDemo && shareUrl != null)
+            {
+                <div class="share-card">
+                    <span style="font-size:14px;color:#a5b4fc;">🔗</span>
+                    <code class="share-url">@shareUrl</code>
+                    <button class="btn-ghost" @onclick="CopyShare">@Loc["share.copy"]</button>
+                    <button class="btn-ghost" @onclick="() => shareUrl = null">✕</button>
+                </div>
+            }
+
+            @if (historyByDate is null)
+            {
+                <div class="loading-row"><FluentProgressRing Style="width:22px;height:22px;" /> @Loc["loading"]</div>
+            }
+            else if (historyByDate.Count == 0)
+            {
+                <div class="empty-state">
+                    <div class="empty-state-icon">📅</div>
+                    <div class="empty-state-title">@Loc["history.empty"]</div>
+                    <button class="btn-primary" @onclick="() => pageView = PageView.Main">@Loc["empty.upload"]</button>
+                </div>
+            }
+            else
+            {
+                var displayHistory = filterCategory is null
+                    ? historyByDate
+                    : historyByDate
+                        .Select(kv => new KeyValuePair<DateTime, List<LabResult>>(
+                            kv.Key,
+                            kv.Value.Where(r => GetLabGroup(r.TestName) == filterCategory).ToList()))
+                        .Where(kv => kv.Value.Count > 0)
+                        .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+                <div class="history-grid">
+                    @foreach (var (date, items) in displayHistory.OrderByDescending(kv => kv.Key))
+                    {
+                        var isOpen     = openDates.Contains(date);
+                        var abnCount   = items.Count(x => x.IsAbnormal);
+                        var isLoading  = loadingAi.Contains(date);
+                        var isDeleting = deletingDates.Contains(date);
+                        aiSummaries.TryGetValue(date, out var dateSumm);
+
+                        <div class="history-card @(isOpen ? "open" : "")">
+                            <div class="history-card-header" @onclick="() => ToggleDate(date)">
+                                <span class="history-card-chevron">▶</span>
+                                <span class="history-card-date">@Loc.FormatDate(date)</span>
+                                <span class="chip chip-neutral">@items.Count</span>
+                                @if (abnCount > 0) { <span class="chip chip-warn">⚠ @abnCount</span> }
+                                else { <span class="chip chip-ok">✓</span> }
+                                <span @onclick:stopPropagation="true" style="display:flex;gap:6px;margin-left:auto;">
+                                    <button class="btn-ghost" style="padding:6px 10px;font-size:12px;"
+                                            @onclick="() => GetAiSummaryAsync(date, items)" disabled="@isLoading">
+                                        @(isLoading ? "⏳" : Loc["ai.short"])
+                                    </button>
+                                    @if (!isDemo)
+                                    {
+                                        <button class="btn-danger" style="padding:6px 10px;font-size:12px;"
+                                                @onclick="() => DeleteByDateAsync(date)" disabled="@isDeleting">
+                                            @(isDeleting ? "⏳" : "🗑️")
+                                        </button>
+                                    }
+                                </span>
+                            </div>
+
+                            @if (isOpen)
+                            {
+                                <div class="history-card-body">
+                                    @if (isLoading)
+                                    {
+                                        <div class="loading-row" style="padding:16px 0 8px;"><FluentProgressRing Style="width:16px;height:16px;" /> @Loc["generating"]</div>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(dateSumm))
+                                    {
+                                        <div class="ai-conclusion-card" style="margin:16px 0;">
+                                            <div class="ai-conclusion-header">
+                                                <div class="ai-conclusion-icon" style="width:30px;height:30px;font-size:14px;">🤖</div>
+                                                <div class="ai-conclusion-title" style="font-size:14px;">AI висновок</div>
+                                            </div>
+                                            <div class="ai-conclusion-text" style="font-size:13px;">@dateSumm</div>
+                                        </div>
+                                    }
+
+                                    <div style="overflow-x:auto;margin-top:12px;">
+                                        <table class="indicators-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>@Loc["tbl.indicator"]</th>
+                                                    <th class="right">@Loc["tbl.value"]</th>
+                                                    <th>@Loc["tbl.unit"]</th>
+                                                    <th>@Loc["tbl.range"]</th>
+                                                    <th class="center">Статус</th>
+                                                    <th class="center">AI</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var r in items.OrderBy(x => x.TestName))
+                                                {
+                                                    var hek = r.TestName + "_" + date.Ticks;
+                                                    var hel = displayExplainLoading.Contains(hek);
+                                                    displayExplainTexts.TryGetValue(hek, out var het);
+                                                    var hItem = new DisplayItem(hek, r.TestName, r.Value, r.Unit, r.ReferenceRange, r.IsAbnormal);
+                                                    <tr class="@(r.IsAbnormal ? "row-abn" : "")">
+                                                        <td class="test-name">@r.TestName</td>
+                                                        <td class="right @(r.IsAbnormal ? "val-warn" : "val-ok")">@r.Value.ToString("G6")</td>
+                                                        <td class="muted">@r.Unit</td>
+                                                        <td class="muted">@r.ReferenceRange</td>
+                                                        <td class="center">
+                                                            @if (r.IsAbnormal) { <span class="status-chip warn">⚠</span> }
+                                                            else { <span class="status-chip ok">✓</span> }
+                                                        </td>
+                                                        <td class="center">
+                                                            <button class="btn-explain-sm" @onclick="() => ExplainDisplayItemAsync(hItem)" disabled="@hel">
+                                                                @(hel ? "⏳" : "🤖")
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    @if (!string.IsNullOrWhiteSpace(het))
+                                                    {
+                                                        <tr class="tbl-explain-row">
+                                                            <td colspan="6">
+                                                                <div class="tbl-explain-cell">
+                                                                    <span>🤖</span>
+                                                                    <span style="flex:1;">@het</span>
+                                                                    <button class="explain-close-btn" @onclick="() => displayExplainTexts.Remove(hek)">✕</button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        }
+
+        <!-- ══ CHARTS PAGE ════════════════════════════════ -->
+        @if (pageView == PageView.Charts)
+        {
+            <div style="padding-top:32px;">
+                <div class="section-header">
+                    <div class="section-title">@Loc["charts.title"]</div>
+                </div>
                 @if (labTypes is null)
                 {
                     <div class="loading-row"><FluentProgressRing Style="width:22px;height:22px;" /> @Loc["loading"]</div>
                 }
                 else if (labTypes.Count == 0)
                 {
-                    <p class="muted">@Loc["charts.empty"]</p>
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📈</div>
+                        <div class="empty-state-title">@Loc["charts.empty"]</div>
+                    </div>
                 }
                 else
                 {
-                    <select class="select-test" @onchange="OnTestSelected">
+                    <select class="chart-select" @onchange="OnTestSelected">
                         <option value="">@Loc["charts.select"]</option>
                         @if (labTypeGroups != null)
                         {
@@ -487,10 +599,9 @@
                             }
                         }
                     </select>
-
                     @if (chart != null)
                     {
-                        <div style="margin-top:16px;">
+                        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;">
                             <PlotlyChart Config="@chart.Config" Layout="@chart.Layout"
                                          Data="@chart.Data" @ref="chart" @key="chartVersion" />
                         </div>
@@ -499,34 +610,35 @@
             </div>
         }
 
-    </main>
-
-    <!-- ── Mobile bottom nav ─────────────────────────────── -->
-    <nav class="mob-bottom-nav">
-        <button class="mob-tab @Active(Tab.Dashboard)" @onclick="() => tab = Tab.Dashboard">
-            <span class="mob-tab-icon">🏠</span>
-            <span>@Loc["tab.dashboard"]</span>
-        </button>
-        <button class="mob-tab @Active(Tab.Upload)" @onclick="() => tab = Tab.Upload">
-            <span class="mob-tab-icon">📄</span>
-            <span>@Loc["tab.upload"]</span>
-        </button>
-        <button class="mob-tab @Active(Tab.History)" @onclick="() => tab = Tab.History">
-            <span class="mob-tab-icon">📅</span>
-            <span>@Loc["tab.history"]</span>
-        </button>
-        <button class="mob-tab @Active(Tab.Charts)" @onclick="() => tab = Tab.Charts">
-            <span class="mob-tab-icon">📈</span>
-            <span>@Loc["tab.charts"]</span>
-        </button>
-    </nav>
-
-</div>
+    </div><!-- /page-content -->
+</div><!-- /page-shell -->
 
 @code {
-    private enum Tab { Dashboard, Upload, History, Charts }
-    private Tab tab = Tab.Dashboard;
-    private string Active(Tab t) => tab == t ? "active" : "";
+    private enum PageView { Main, History, Charts }
+    private PageView pageView = PageView.Main;
+
+    // ── Display Item (unified model) ──────────────────
+    private record DisplayItem(string Key, string TestName, double Value, string Unit, string ReferenceRange, bool IsAbnormal);
+
+    private IReadOnlyList<DisplayItem>? CurrentItems
+    {
+        get
+        {
+            if (parsedResults != null)
+                return parsedResults.Select(m => new DisplayItem(m.TestName, m.TestName, m.Value, m.Unit, m.ReferenceRange, m.IsAbnormal)).ToList();
+            var latest = historyByDate?.OrderByDescending(kv => kv.Key).FirstOrDefault();
+            if (latest == null || latest.Value.Value.Count == 0) return null;
+            return latest.Value.Value.Select(r => new DisplayItem(r.TestName, r.TestName, r.Value, r.Unit, r.ReferenceRange, r.IsAbnormal)).ToList();
+        }
+    }
+
+    private IReadOnlyList<DisplayItem>? CurrentAbnormal => CurrentItems?.Where(i => i.IsAbnormal).ToList();
+
+    private DateTime? CurrentDate =>
+        parsedResults != null ? parsedDate :
+        historyByDate?.Keys.OrderByDescending(d => d).FirstOrDefault() is DateTime d && d != default ? d : null;
+
+    private bool HasData => historyByDate?.Count > 0;
 
     // ── User info ─────────────────────────────────────
     private string? userName;
@@ -539,6 +651,16 @@
     private string? lastDateStr;
     private int totalCount;
     private int abnormalCount;
+    private bool showFullSummary;
+
+    private string? CurrentSummary => parsedResults != null ? uploadAiSummary : dashAiSummary;
+    private bool CurrentSummaryLoading => parsedResults != null ? isUploadAiLoading : isDashAiLoading;
+
+    private static string FirstParagraph(string text)
+    {
+        var idx = text.IndexOf('\n');
+        return idx > 0 ? text[..idx].Trim() : (text.Length > 300 ? text[..300].Trim() + "…" : text);
+    }
 
     // ── Upload ────────────────────────────────────────
     private const long MaxBytes = 5 * 1024 * 1024;
@@ -560,59 +682,32 @@
     private string? shareUrl;
     private string? shareScope;
 
-    // ── AI explain per indicator ──────────────────────
-    private Dictionary<int, string> explainTexts = new();
-    private HashSet<int> explainLoading = new();
-    private Dictionary<string, string> uploadExplainTexts = new();
-    private HashSet<string> uploadExplainLoading = new();
+    // ── AI explain (unified) ──────────────────────────
+    private Dictionary<string, string> displayExplainTexts = new();
+    private HashSet<string> displayExplainLoading = new();
 
-    private async Task ExplainAsync(LabResult r)
+    private async Task ExplainDisplayItemAsync(DisplayItem item)
     {
-        if (explainLoading.Contains(r.Id)) return;
-        if (explainTexts.ContainsKey(r.Id)) { explainTexts.Remove(r.Id); return; }
-        explainLoading.Add(r.Id);
+        var key = item.Key;
+        if (displayExplainLoading.Contains(key)) return;
+        if (displayExplainTexts.ContainsKey(key)) { displayExplainTexts.Remove(key); return; }
+        displayExplainLoading.Add(key);
         StateHasChanged();
         try
         {
             var resp = await Http.PostAsJsonAsync("/api/LabResult/ai-explain", new
             {
-                testName = r.TestName, value = r.Value,
-                unit = r.Unit, referenceRange = r.ReferenceRange,
-                lang = Loc.Lang
+                testName = item.TestName, value = item.Value,
+                unit = item.Unit, referenceRange = item.ReferenceRange, lang = Loc.Lang
             });
             if (resp.IsSuccessStatusCode)
             {
                 var obj = await resp.Content.ReadFromJsonAsync<ExplainResponse>();
-                if (obj?.Explanation != null) explainTexts[r.Id] = obj.Explanation;
+                if (obj?.Explanation != null) displayExplainTexts[key] = obj.Explanation;
             }
         }
         catch { }
-        finally { explainLoading.Remove(r.Id); StateHasChanged(); }
-    }
-
-    private async Task ExplainUploadAsync(ParsedLabMetric m)
-    {
-        var key = m.TestName;
-        if (uploadExplainLoading.Contains(key)) return;
-        if (uploadExplainTexts.ContainsKey(key)) { uploadExplainTexts.Remove(key); return; }
-        uploadExplainLoading.Add(key);
-        StateHasChanged();
-        try
-        {
-            var resp = await Http.PostAsJsonAsync("/api/LabResult/ai-explain", new
-            {
-                testName = m.TestName, value = m.Value,
-                unit = m.Unit, referenceRange = m.ReferenceRange,
-                lang = Loc.Lang
-            });
-            if (resp.IsSuccessStatusCode)
-            {
-                var obj = await resp.Content.ReadFromJsonAsync<ExplainResponse>();
-                if (obj?.Explanation != null) uploadExplainTexts[key] = obj.Explanation;
-            }
-        }
-        catch { }
-        finally { uploadExplainLoading.Remove(key); StateHasChanged(); }
+        finally { displayExplainLoading.Remove(key); StateHasChanged(); }
     }
 
     private record ExplainResponse(string? Explanation);
@@ -626,6 +721,9 @@
     // ── Error state ───────────────────────────────────
     private string? loadError;
 
+    // ── Demo mode ─────────────────────────────────────
+    private bool isDemo;
+
     // ── Localization ──────────────────────────────────
     private Action? _locHandler;
 
@@ -634,7 +732,6 @@
     private async Task SwitchLangAsync(string lang)
     {
         await Loc.SetLangAsync(lang);
-        // Refresh date strings
         var lastDate = historyByDate?.Keys.OrderByDescending(d => d).FirstOrDefault();
         lastDateStr = lastDate.HasValue && lastDate != default ? Loc.FormatDate(lastDate.Value) : null;
     }
@@ -646,7 +743,35 @@
         _locHandler = () => InvokeAsync(StateHasChanged);
         Loc.LanguageChanged += _locHandler;
 
-        try { await Task.WhenAll(LoadHistoryAsync(), LoadLabTypesAsync()); }
+        isDemo = Nav.Uri.Contains("/demo", StringComparison.OrdinalIgnoreCase);
+
+        if (!isDemo)
+        {
+            var user = await Auth.GetUserAsync();
+            if (user.Identity?.IsAuthenticated != true)
+            {
+                Nav.NavigateTo("/login");
+                return;
+            }
+        }
+
+        try
+        {
+            if (isDemo)
+            {
+                await LoadHistoryAsync();
+                labTypes = historyByDate!.SelectMany(kv => kv.Value)
+                    .Select(r => r.TestName).Distinct().OrderBy(x => x).ToList();
+                labTypeGroups = labTypes
+                    .GroupBy(GetLabGroup)
+                    .OrderBy(g => LabGroupOrder(g.Key))
+                    .ToDictionary(g => g.Key, g => g.OrderBy(x => x).ToList());
+            }
+            else
+            {
+                await Task.WhenAll(LoadHistoryAsync(), LoadLabTypesAsync());
+            }
+        }
         catch (Exception ex) { loadError = ex.Message; }
     }
 
@@ -669,7 +794,16 @@
     // ── Data loading ──────────────────────────────────
     private async Task LoadHistoryAsync()
     {
-        var all = await Http.GetFromJsonAsync<List<LabResult>>("/api/LabResult");
+        List<LabResult>? all;
+        if (isDemo)
+        {
+            var staticUrl = Nav.BaseUri.TrimEnd('/') + "/sample-data/demo.json";
+            all = await Http.GetFromJsonAsync<List<LabResult>>(staticUrl);
+        }
+        else
+        {
+            all = await Http.GetFromJsonAsync<List<LabResult>>("/api/LabResult");
+        }
         historyByDate = (all ?? [])
             .GroupBy(r => r.TestDate.Date)
             .ToDictionary(g => g.Key, g => g.ToList());
@@ -694,70 +828,12 @@
         }
     }
 
-    // ── Dashboard logic ───────────────────────────────
-    private List<CategoryCard> ComputeCategoryCards()
+    // ── AI summary (unified) ──────────────────────────
+    private async Task GetCurrentAiSummaryAsync()
     {
-        if (historyByDate is null) return [];
-        var allResults = historyByDate.SelectMany(kv => kv.Value).ToList();
-        return allResults
-            .GroupBy(r => GetLabGroup(r.TestName))
-            .Select(g =>
-            {
-                var dates     = g.GroupBy(r => r.TestDate.Date).OrderBy(d => d.Key).ToList();
-                var lastDate  = dates.Last().Key;
-                var lastItems = dates.Last().ToList();
-                var abnCount  = lastItems.Count(r => r.IsAbnormal);
-                var count     = g.Select(r => r.TestName).Distinct().Count();
-                var sparkVals = dates
-                    .Select(d => (double)d.Count(r => r.IsAbnormal) / d.Count() * 100)
-                    .ToList();
-                return new CategoryCard(
-                    g.Key, GetGroupIcon(g.Key), lastDate,
-                    count, abnCount, abnCount > 0,
-                    GenerateSparklinePoints(sparkVals));
-            })
-            .OrderBy(c => LabGroupOrder(c.Name))
-            .ToList();
-    }
-
-    private static string GenerateSparklinePoints(List<double> values)
-    {
-        if (values.Count < 2) return "0,28 100,28";
-        var min = values.Min(); var max = values.Max(); var range = max - min;
-        return string.Join(" ", values.Select((v, i) =>
-        {
-            var x = (double)i / (values.Count - 1) * 100;
-            var y = range == 0 ? 15.0 : 28.0 - (v - min) / range * 24.0;
-            return $"{x:F1},{y:F1}";
-        }));
-    }
-
-    private static string GetGroupIcon(string group) => group switch
-    {
-        "Загальний аналіз крові"    => "🩸",
-        "Ліпідограма"               => "💧",
-        "Біохімія"                  => "🧪",
-        "Гормони та ендокринологія" => "⚡",
-        "Онкомаркери"               => "🔬",
-        "Інфекційна серологія"      => "🦠",
-        _                           => "📊"
-    };
-
-    private static (string bg, string fg) GetCatColors(string group) => group switch
-    {
-        "Загальний аналіз крові"    => ("#fee2e2", "#ef4444"),
-        "Ліпідограма"               => ("#dbeafe", "#3b82f6"),
-        "Біохімія"                  => ("#dcfce7", "#16a34a"),
-        "Гормони та ендокринологія" => ("#f3e8ff", "#9333ea"),
-        "Онкомаркери"               => ("#ffedd5", "#ea580c"),
-        "Інфекційна серологія"      => ("#d1fae5", "#059669"),
-        _                           => ("#f1f5f9", "#64748b"),
-    };
-
-    private static string CatBubbleStyle(string group)
-    {
-        var (bg, fg) = GetCatColors(group);
-        return $"background:{bg};color:{fg}";
+        if (parsedResults is { Count: > 0 }) await GetUploadAiSummaryAsync();
+        else await GetDashAiSummaryAsync();
+        showFullSummary = true;
     }
 
     private async Task GetDashAiSummaryAsync()
@@ -782,7 +858,7 @@
     private Task OnFileSelected(InputFileChangeEventArgs e)
     {
         selectedFile = e.File; parsedResults = null; uploadMsg = null;
-        uploadError = false; uploadAiSummary = null;
+        uploadError = false; uploadAiSummary = null; displayExplainTexts.Clear();
         return Task.CompletedTask;
     }
 
@@ -813,6 +889,7 @@
                 ? Loc["upload.notFound"]
                 : Loc.Format("upload.found", parsedResults.Count);
             uploadError = parsedResults.Count == 0;
+            showFullSummary = false;
         }
         catch (IOException) { uploadMsg = Loc["upload.tooLarge"]; uploadError = true; }
         catch (Exception ex) { uploadMsg = Loc.Format("upload.error", ex.Message); uploadError = true; }
@@ -827,13 +904,9 @@
         {
             var body = new { date = parsedDate ?? DateTime.Today, results = parsedResults.Select(x => new { testName = x.TestName, value = x.Value, unit = x.Unit, referenceRange = x.ReferenceRange, isAbnormal = x.IsAbnormal }) };
             var resp = await Http.PostAsJsonAsync("/api/LabResult/save-parsed", body);
-            if (!resp.IsSuccessStatusCode)
-            {
-                uploadMsg = Loc.Format("upload.saveFailed", (int)resp.StatusCode);
-                uploadError = true; return;
-            }
+            if (!resp.IsSuccessStatusCode) { uploadMsg = Loc.Format("upload.saveFailed", (int)resp.StatusCode); uploadError = true; return; }
             uploadMsg = Loc.Format("upload.saved", parsedResults.Count);
-            parsedResults = null; tab = Tab.Dashboard;
+            parsedResults = null; selectedFile = null;
             await Task.WhenAll(LoadHistoryAsync(), LoadLabTypesAsync());
         }
         catch (Exception ex) { uploadMsg = Loc.Format("upload.error", ex.Message); uploadError = true; }
@@ -877,7 +950,7 @@
     private void OpenCategoryHistory(string categoryName)
     {
         filterCategory = categoryName;
-        tab = Tab.History;
+        pageView = PageView.History;
     }
 
     // ── Delete by date ────────────────────────────────
@@ -927,8 +1000,17 @@
         var name = e.Value?.ToString();
         if (string.IsNullOrEmpty(name)) { chart = null; return; }
 
-        var results = await Http.GetFromJsonAsync<List<LabResult>>(
-            $"/api/LabResult/labresults?testName={Uri.EscapeDataString(name)}");
+        List<LabResult>? results;
+        if (isDemo)
+        {
+            results = historyByDate!.SelectMany(kv => kv.Value)
+                .Where(r => r.TestName == name).OrderBy(r => r.TestDate).ToList();
+        }
+        else
+        {
+            results = await Http.GetFromJsonAsync<List<LabResult>>(
+                $"/api/LabResult/labresults?testName={Uri.EscapeDataString(name)}");
+        }
         if (results is not { Count: > 0 }) { chart = null; return; }
 
         var ordered  = results.OrderBy(r => r.TestDate).ToList();
@@ -947,15 +1029,141 @@
             }],
             Layout = new Layout
             {
-                Title = new Title { Text = name },
-                XAxis = [new() { Title = new Plotly.Blazor.LayoutLib.XAxisLib.Title { Text = Loc["charts.xLabel"] } }],
-                YAxis = [new() { Title = new Plotly.Blazor.LayoutLib.YAxisLib.Title { Text = refRange } }],
-                Margin = new Margin { L = 60, R = 20, T = 50, B = 60 },
+                Title   = new Title { Text = name },
+                XAxis   = [new() { Title = new Plotly.Blazor.LayoutLib.XAxisLib.Title { Text = Loc["charts.xLabel"] } }],
+                YAxis   = [new() { Title = new Plotly.Blazor.LayoutLib.YAxisLib.Title { Text = refRange } }],
+                Margin  = new Margin { L = 60, R = 20, T = 50, B = 60 },
+                PaperBgColor = "rgba(0,0,0,0)",
+                PlotBgColor  = "rgba(0,0,0,0)",
+                Font = new Plotly.Blazor.LayoutLib.Font { Color = "#94A3B8" },
             },
             Config = new Plotly.Blazor.Config { Responsive = true }
         };
         chartVersion++;
         StateHasChanged();
+    }
+
+    // ── Logout ────────────────────────────────────────
+    private async Task LogoutAsync()
+    {
+        await Auth.ClearTokenAsync();
+        AuthState.NotifyChanged();
+        Nav.NavigateTo("/login");
+    }
+
+    // ── Dashboard helpers ─────────────────────────────
+    private List<CategoryCard> ComputeCategoryCards()
+    {
+        if (historyByDate is null) return [];
+        var allResults = historyByDate.SelectMany(kv => kv.Value).ToList();
+        return allResults
+            .GroupBy(r => GetLabGroup(r.TestName))
+            .Select(g =>
+            {
+                var dates    = g.GroupBy(r => r.TestDate.Date).OrderBy(d => d.Key).ToList();
+                var lastDate = dates.Last().Key;
+                var lastItems = dates.Last().ToList();
+                var abnCount = lastItems.Count(r => r.IsAbnormal);
+                var count    = g.Select(r => r.TestName).Distinct().Count();
+                var sparkVals = dates.Select(d => (double)d.Count(r => r.IsAbnormal) / d.Count() * 100).ToList();
+                return new CategoryCard(g.Key, lastDate, count, abnCount, abnCount > 0);
+            })
+            .OrderBy(c => LabGroupOrder(c.Name))
+            .ToList();
+    }
+
+    private static string GenerateSparklinePoints(List<double> values)
+    {
+        if (values.Count < 2) return "0,28 100,28";
+        var min = values.Min(); var max = values.Max(); var range = max - min;
+        return string.Join(" ", values.Select((v, i) =>
+        {
+            var x = (double)i / (values.Count - 1) * 100;
+            var y = range == 0 ? 15.0 : 28.0 - (v - min) / range * 24.0;
+            return $"{x:F1},{y:F1}";
+        }));
+    }
+
+    private static MarkupString GetGroupSvg(string group) => (MarkupString)(group switch
+    {
+        // Blood drop
+        "Загальний аналіз крові" =>
+            """<svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C10.5 4.5 5 10 5 15a7 7 0 0 0 14 0c0-5-5.5-10.5-7-13z"/><path d="M9 17c.5 1.5 2 2.5 3 2.5" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.5" stroke-linecap="round"/></svg>""",
+
+        // Heart with EKG line
+        "Ліпідограма" =>
+            """<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><path fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" d="M6 12h2l1.5-2.5 2 5 1.5-2.5H18"/></svg>""",
+
+        // Erlenmeyer flask with bubbles
+        "Біохімія" =>
+            """<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M9 3h6"/><path d="M10 3v6.5L6 16a3 3 0 0 0 2.68 4.34h6.64A3 3 0 0 0 18 16l-4-6.5V3"/><circle cx="10" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="17" r="0.8" fill="currentColor" stroke="none"/><circle cx="12" cy="13" r="0.6" fill="currentColor" stroke="none"/></svg>""",
+
+        // DNA double helix
+        "Гормони та ендокринологія" =>
+            """<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" xmlns="http://www.w3.org/2000/svg"><path d="M3 4c5 0 8 3.5 9 7s4 7 9 7"/><path d="M21 4c-5 0-8 3.5-9 7s-4 7-9 7"/><line x1="6.5" y1="4.5" x2="6.5" y2="7.5"/><line x1="17.5" y1="4.5" x2="17.5" y2="7.5"/><line x1="6.5" y1="16.5" x2="6.5" y2="19.5"/><line x1="17.5" y1="16.5" x2="17.5" y2="19.5"/><line x1="10" y1="11" x2="14" y2="13"/></svg>""",
+
+        // Microscope
+        "Онкомаркери" =>
+            """<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M6 18H4a1 1 0 0 1-1-1v-1a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1h-2"/><path d="M6 18V7"/><path d="M18 18V7"/><path d="M12 2v4"/><path d="M9 6h6"/><circle cx="12" cy="13" r="3"/><path d="M12 10v-4" stroke-opacity="0.4"/></svg>""",
+
+        // Shield + virus/cross
+        "Інфекційна серологія" =>
+            """<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path fill="none" stroke="rgba(255,255,255,.85)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8.5 12.5l2 2 5-5"/></svg>""",
+
+        // Bar chart
+        _ =>
+            """<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>"""
+    });
+
+    private static (string bg, string fg) GetCatColors(string group) => group switch
+    {
+        "Загальний аналіз крові"    => ("rgba(239,68,68,.12)",  "#ef4444"),
+        "Ліпідограма"               => ("rgba(59,130,246,.12)", "#3b82f6"),
+        "Біохімія"                  => ("rgba(34,197,94,.12)",  "#22c55e"),
+        "Гормони та ендокринологія" => ("rgba(168,85,247,.12)", "#a855f7"),
+        "Онкомаркери"               => ("rgba(249,115,22,.12)", "#f97316"),
+        "Інфекційна серологія"      => ("rgba(20,184,166,.12)", "#14b8a6"),
+        _                           => ("rgba(99,102,241,.12)", "#6366f1"),
+    };
+
+    private static string CatBubbleStyle(string group)
+    {
+        var (bg, fg) = GetCatColors(group);
+        return $"background:{bg};color:{fg}";
+    }
+
+    // ── Deviation helpers ─────────────────────────────
+    private static string GetDeviationClass(double value, string? referenceRange)
+    {
+        if (string.IsNullOrWhiteSpace(referenceRange)) return "dv-other";
+        if (referenceRange.StartsWith('<') || referenceRange.StartsWith("до "))
+            return value > 0 ? "dv-high" : "dv-other";
+        var dash = referenceRange.IndexOfAny(['-', '–']);
+        if (dash > 0)
+        {
+            if (double.TryParse(referenceRange[..dash].Replace(',', '.').Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var lo))
+                return value < lo ? "dv-low" : "dv-high";
+        }
+        return "dv-other";
+    }
+
+    private static string GetDeviationLabel(double value, string? referenceRange)
+    {
+        var cls = GetDeviationClass(value, referenceRange);
+        return cls switch { "dv-high" => "▲ Підвищений", "dv-low" => "▼ Знижений", _ => "⚠ Відхилення" };
+    }
+
+    private static string GetTestIcon(string name)
+    {
+        var n = name.ToLowerInvariant();
+        if (n.Contains("гемоглобін") || n.Contains("еритро") || n.Contains("hgb")) return "🩸";
+        if (n.Contains("холестерин") || n.Contains("ліпо") || n.Contains("тригліцер")) return "💧";
+        if (n.Contains("глюкоза") || n.Contains("інсулін")) return "🍬";
+        if (n.Contains("алт") || n.Contains("аст") || n.Contains("білірубін")) return "🧪";
+        if (n.Contains("феритин") || n.Contains("залізо")) return "🔴";
+        if (n.Contains("вітамін") || n.Contains("vitamin")) return "☀️";
+        if (n.Contains("лейкоцит") || n.Contains("wbc")) return "🛡️";
+        return "📊";
     }
 
     // ── Grouping helpers ──────────────────────────────
@@ -1017,18 +1225,10 @@
         _                           => 99
     };
 
-    // ── Logout ────────────────────────────────────────
-    private async Task LogoutAsync()
-    {
-        await Auth.ClearTokenAsync();
-        AuthState.NotifyChanged();
-        Nav.NavigateTo("/login");
-    }
-
     // ── Local models ──────────────────────────────────
     private sealed class AiSummaryResponse { public string? Summary { get; set; } }
 
     private record CategoryCard(
-        string Name, string Icon, DateTime LastDate,
-        int Count, int AbnormalCount, bool HasAbnormal, string SparkPoints);
+        string Name, DateTime LastDate,
+        int Count, int AbnormalCount, bool HasAbnormal);
 }

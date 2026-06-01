@@ -49,7 +49,7 @@ public static partial class LabResultHelper
     }
 
     private static bool TryParse(string s, out double result) =>
-        double.TryParse(s.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture, out result);
+        double.TryParse(s.Trim().Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out result);
 
     [GeneratedRegex(@"^(-?[\d.,]+)\s*[–\-]\s*(-?[\d.,]+)$")]
     private static partial Regex RangeRegex();

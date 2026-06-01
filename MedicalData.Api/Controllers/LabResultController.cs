@@ -174,6 +174,54 @@ public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAge
         return Ok(new { savedCount });
     }
 
+    [AllowAnonymous]
+    [HttpGet("demo")]
+    public IActionResult GetDemo()
+    {
+        var d1 = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc);
+        var d2 = new DateTime(2025, 5, 10, 0, 0, 0, DateTimeKind.Utc);
+        var d3 = new DateTime(2025, 11, 18, 0, 0, 0, DateTimeKind.Utc);
+
+        var results = new object[]
+        {
+            // Jan 2025 — CBC + Lipids (elevated)
+            new { id = 1,  testName = "Гемоглобін",           value = 138.0, unit = "г/л",      referenceRange = "130-175", isAbnormal = false, testDate = d1, patientName = "" },
+            new { id = 2,  testName = "Лейкоцити",            value = 9.8,   unit = "10⁹/л",    referenceRange = "4.0-9.0", isAbnormal = true,  testDate = d1, patientName = "" },
+            new { id = 3,  testName = "Еритроцити",           value = 4.8,   unit = "10¹²/л",   referenceRange = "4.0-5.5", isAbnormal = false, testDate = d1, patientName = "" },
+            new { id = 4,  testName = "Тромбоцити",           value = 218.0, unit = "10⁹/л",    referenceRange = "150-400", isAbnormal = false, testDate = d1, patientName = "" },
+            new { id = 5,  testName = "Холестерин загальний", value = 6.4,   unit = "ммоль/л",  referenceRange = "<5.2",    isAbnormal = true,  testDate = d1, patientName = "" },
+            new { id = 6,  testName = "Холестерин ЛПНЩ",      value = 4.2,   unit = "ммоль/л",  referenceRange = "<3.0",    isAbnormal = true,  testDate = d1, patientName = "" },
+            new { id = 7,  testName = "Холестерин ЛПВЩ",      value = 1.05,  unit = "ммоль/л",  referenceRange = ">1.0",    isAbnormal = false, testDate = d1, patientName = "" },
+            new { id = 8,  testName = "Тригліцериди",         value = 2.6,   unit = "ммоль/л",  referenceRange = "<1.7",    isAbnormal = true,  testDate = d1, patientName = "" },
+
+            // May 2025 — CBC + Biochemistry (improving)
+            new { id = 9,  testName = "Гемоглобін",           value = 141.0, unit = "г/л",      referenceRange = "130-175", isAbnormal = false, testDate = d2, patientName = "" },
+            new { id = 10, testName = "Лейкоцити",            value = 7.9,   unit = "10⁹/л",    referenceRange = "4.0-9.0", isAbnormal = false, testDate = d2, patientName = "" },
+            new { id = 11, testName = "Еритроцити",           value = 5.0,   unit = "10¹²/л",   referenceRange = "4.0-5.5", isAbnormal = false, testDate = d2, patientName = "" },
+            new { id = 12, testName = "Глюкоза",              value = 5.8,   unit = "ммоль/л",  referenceRange = "3.9-6.1", isAbnormal = false, testDate = d2, patientName = "" },
+            new { id = 13, testName = "АЛТ",                  value = 52.0,  unit = "Од/л",     referenceRange = "<40",     isAbnormal = true,  testDate = d2, patientName = "" },
+            new { id = 14, testName = "АСТ",                  value = 38.0,  unit = "Од/л",     referenceRange = "<40",     isAbnormal = false, testDate = d2, patientName = "" },
+            new { id = 15, testName = "Холестерин загальний", value = 5.9,   unit = "ммоль/л",  referenceRange = "<5.2",    isAbnormal = true,  testDate = d2, patientName = "" },
+            new { id = 16, testName = "Холестерин ЛПНЩ",      value = 3.5,   unit = "ммоль/л",  referenceRange = "<3.0",    isAbnormal = true,  testDate = d2, patientName = "" },
+            new { id = 17, testName = "Тригліцериди",         value = 1.8,   unit = "ммоль/л",  referenceRange = "<1.7",    isAbnormal = true,  testDate = d2, patientName = "" },
+
+            // Nov 2025 — all normalized
+            new { id = 18, testName = "Гемоглобін",           value = 145.0, unit = "г/л",      referenceRange = "130-175", isAbnormal = false, testDate = d3, patientName = "" },
+            new { id = 19, testName = "Лейкоцити",            value = 6.2,   unit = "10⁹/л",    referenceRange = "4.0-9.0", isAbnormal = false, testDate = d3, patientName = "" },
+            new { id = 20, testName = "Еритроцити",           value = 5.1,   unit = "10¹²/л",   referenceRange = "4.0-5.5", isAbnormal = false, testDate = d3, patientName = "" },
+            new { id = 21, testName = "Тромбоцити",           value = 224.0, unit = "10⁹/л",    referenceRange = "150-400", isAbnormal = false, testDate = d3, patientName = "" },
+            new { id = 22, testName = "Глюкоза",              value = 5.3,   unit = "ммоль/л",  referenceRange = "3.9-6.1", isAbnormal = false, testDate = d3, patientName = "" },
+            new { id = 23, testName = "АЛТ",                  value = 34.0,  unit = "Од/л",     referenceRange = "<40",     isAbnormal = false, testDate = d3, patientName = "" },
+            new { id = 24, testName = "АСТ",                  value = 29.0,  unit = "Од/л",     referenceRange = "<40",     isAbnormal = false, testDate = d3, patientName = "" },
+            new { id = 25, testName = "Холестерин загальний", value = 4.9,   unit = "ммоль/л",  referenceRange = "<5.2",    isAbnormal = false, testDate = d3, patientName = "" },
+            new { id = 26, testName = "Холестерин ЛПНЩ",      value = 2.9,   unit = "ммоль/л",  referenceRange = "<3.0",    isAbnormal = false, testDate = d3, patientName = "" },
+            new { id = 27, testName = "Холестерин ЛПВЩ",      value = 1.3,   unit = "ммоль/л",  referenceRange = ">1.0",    isAbnormal = false, testDate = d3, patientName = "" },
+            new { id = 28, testName = "Тригліцериди",         value = 1.4,   unit = "ммоль/л",  referenceRange = "<1.7",    isAbnormal = false, testDate = d3, patientName = "" },
+        };
+        return Ok(results);
+    }
+
+    [AllowAnonymous]
     [HttpPost("ai-summary")]
     public async Task<ActionResult> GetAiSummary(
         [FromBody] AiSummaryRequest request,
@@ -202,6 +250,7 @@ public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAge
         }
     }
 
+    [AllowAnonymous]
     [HttpPost("ai-explain")]
     public async Task<ActionResult> GetAiExplain(
         [FromBody] AiExplainRequest request,
