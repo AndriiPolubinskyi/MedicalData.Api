@@ -88,8 +88,11 @@ else
 if (!string.IsNullOrWhiteSpace(groqKey))
     builder.Services.AddScoped<ILabAiService, GroqLabAiService>();
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen();
+}
 
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();
@@ -97,12 +100,15 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
     scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.Migrate();
 
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+if (app.Environment.IsDevelopment())
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "MedicalData API v1");
-    c.RoutePrefix = string.Empty;
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "MedicalData API v1");
+        c.RoutePrefix = "swagger";
+    });
+}
 
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
