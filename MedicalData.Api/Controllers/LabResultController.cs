@@ -241,7 +241,7 @@ public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAge
 
         try
         {
-            var summary = await labAiService.GetSummaryAsync(request.Date, items, cancellationToken);
+            var summary = await labAiService.GetSummaryAsync(request.Date, items, request.Lang, cancellationToken);
             return Ok(new { summary });
         }
         catch (Exception)

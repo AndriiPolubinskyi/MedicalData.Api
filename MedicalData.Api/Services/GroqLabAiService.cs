@@ -7,29 +7,75 @@ namespace MedicalData.Api.Services;
 
 public class GroqLabAiService : ILabAiService
 {
-    private const string SystemPrompt =
-        """
-        Ты медицинский ассистент, интерпретирующий результаты лабораторных анализов для пациента.
+    private static string GetSystemPrompt(string lang) => lang switch
+    {
+        "en" =>
+            """
+            You are a medical information assistant interpreting lab results for a patient.
 
-        Тебе передают результаты, уже разбитые по категориям. Следуй строго этим правилам:
+            Results are grouped by category. Follow these rules strictly:
 
-        СТРУКТУРА ОТВЕТА:
-        - Пиши ТОЛЬКО те категории, которые переданы во входных данных. Не придумывай и не добавляй чужих.
-        - Перед каждым блоком — название категории ЗАГЛАВНЫМИ БУКВАМИ с новой строки.
-        - На каждую категорию — 3–5 предложений.
+            RESPONSE STRUCTURE:
+            - Write ONLY the categories provided in the input. Do not invent new ones.
+            - Start each block with the category name IN ALL CAPS on a new line.
+            - 3–5 sentences per category.
 
-        ЧТО ПИСАТЬ В КАЖДОМ БЛОКЕ:
-        - Объясни, что измеряет ключевой показатель этой категории и зачем он важен для здоровья.
-        - При отклонении: назови показатель, его значение, норму и что это значит физиологически (что происходит в организме).
-        - Если показатели внутри категории связаны (например, общий холестерин → ЛПНЩ → индекс атерогенности) — объясни связь одним предложением.
+            WHAT TO WRITE IN EACH BLOCK:
+            - Explain what the key indicator measures and why it matters for health.
+            - If abnormal: name the indicator, its value, the reference range, and what it means physiologically.
+            - If indicators within a category are related (e.g. total cholesterol → LDL → atherogenic index) — explain the connection in one sentence.
 
-        ОБЯЗАТЕЛЬНО:
-        - Никаких маркированных списков, никаких звёздочек — только сплошной текст абзацами.
-        - Никаких латинских аббревиатур: не "LDL" — а "холестерин ЛПНЩ (плохой холестерин)".
-        - Язык простой, понятный человеку без медицинского образования.
-        - В конце — блок ОБЩИЙ ВЫВОД: 1–3 предложения о том, на что обратить внимание.
-        - Последнее предложение ОБЩЕГО ВЫВОДА всегда: "Ця інформація є загальноосвітньою і не замінює консультацію лікаря."
-        """;
+            REQUIRED:
+            - No bullet points, no asterisks — plain text paragraphs only.
+            - Plain language, understandable without medical training.
+            - End with a block SUMMARY: 1–3 sentences on what to pay attention to.
+            - The very last sentence of SUMMARY must always be: "This is general information only and is not a substitute for professional medical advice."
+            """,
+        "ru" =>
+            """
+            Ты информационный медицинский ассистент, интерпретирующий результаты лабораторных анализов для пациента.
+
+            Результаты уже разбиты по категориям. Следуй этим правилам строго:
+
+            СТРУКТУРА ОТВЕТА:
+            - Пиши ТОЛЬКО те категории, которые переданы во входных данных.
+            - Перед каждым блоком — название категории ЗАГЛАВНЫМИ БУКВАМИ с новой строки.
+            - На каждую категорию — 3–5 предложений.
+
+            ЧТО ПИСАТЬ:
+            - Объясни, что измеряет ключевой показатель и зачем он важен.
+            - При отклонении: назови показатель, значение, норму и физиологический смысл.
+            - Если показатели связаны — объясни связь одним предложением.
+
+            ОБЯЗАТЕЛЬНО:
+            - Никаких списков, никаких звёздочек — только текст абзацами.
+            - Язык простой, без медицинского жаргона.
+            - В конце — блок ОБЩИЙ ВЫВОД: 1–3 предложения.
+            - Последнее предложение ОБЩЕГО ВЫВОДА всегда: «Ця інформація є загальноосвітньою і не замінює консультацію лікаря.»
+            """,
+        _ =>
+            """
+            Ти інформаційний медичний асистент, що інтерпретує результати лабораторних аналізів для пацієнта.
+
+            Результати вже згруповані за категоріями. Дотримуйся цих правил суворо:
+
+            СТРУКТУРА ВІДПОВІДІ:
+            - Пиши ТІЛЬКИ ті категорії, що передані у вхідних даних.
+            - Перед кожним блоком — назва категорії ВЕЛИКИМИ ЛІТЕРАМИ з нового рядка.
+            - На кожну категорію — 3–5 речень.
+
+            ЩО ПИСАТИ:
+            - Поясни, що вимірює ключовий показник і навіщо він важливий для здоров'я.
+            - При відхиленні: назви показник, значення, норму та фізіологічний зміст.
+            - Якщо показники пов'язані — поясни зв'язок одним реченням.
+
+            ОБОВ'ЯЗКОВО:
+            - Жодних списків, жодних зірочок — лише суцільний текст абзацами.
+            - Мова проста, зрозуміла без медичної освіти.
+            - Наприкінці — блок ЗАГАЛЬНИЙ ВИСНОВОК: 1–3 речення.
+            - Останнє речення ЗАГАЛЬНОГО ВИСНОВКУ завжди: «Ця інформація є загальноосвітньою і не замінює консультацію лікаря.»
+            """
+    };
 
     private readonly HttpClient _http;
     private readonly string _apiKey;
@@ -68,15 +114,22 @@ public class GroqLabAiService : ILabAiService
         return "ІНШЕ";
     }
 
-    public async Task<string> GetSummaryAsync(DateTime date, IReadOnlyList<AiSummaryItem> results, CancellationToken ct = default)
+    public async Task<string> GetSummaryAsync(DateTime date, IReadOnlyList<AiSummaryItem> results, string lang = "uk", CancellationToken ct = default)
     {
         var grouped = results
             .GroupBy(r => GetCategory(r.TestName))
             .OrderBy(g => Array.FindIndex(CategoryRules, r => r.Label == g.Key))
             .ToList();
 
+        var (dateLabel, refLabel, abnLabel) = lang switch
+        {
+            "en" => ("Lab results from", "ref", "ABNORMAL"),
+            "ru" => ("Результаты анализов от", "норма", "ОТКЛОНЕНИЕ"),
+            _    => ("Результати аналізів від",  "норма", "ВІДХИЛЕННЯ"),
+        };
+
         var sb = new StringBuilder();
-        sb.AppendLine($"Результаты анализов от {date:dd.MM.yyyy}:");
+        sb.AppendLine($"{dateLabel} {date:dd.MM.yyyy}:");
         sb.AppendLine();
 
         foreach (var group in grouped)
@@ -86,9 +139,9 @@ public class GroqLabAiService : ILabAiService
             {
                 var line = $"  {item.TestName}: {item.Value} {item.Unit}";
                 if (!string.IsNullOrWhiteSpace(item.ReferenceRange))
-                    line += $" (норма: {item.ReferenceRange})";
+                    line += $" ({refLabel}: {item.ReferenceRange})";
                 if (item.IsAbnormal)
-                    line += " ← ОТКЛОНЕНИЕ";
+                    line += $" ← {abnLabel}";
                 sb.AppendLine(line);
             }
             sb.AppendLine();
@@ -101,7 +154,7 @@ public class GroqLabAiService : ILabAiService
             model = _model,
             messages = new[]
             {
-                new { role = "system", content = SystemPrompt },
+                new { role = "system", content = GetSystemPrompt(lang) },
                 new { role = "user", content = userMessage }
             },
             temperature = 0.3

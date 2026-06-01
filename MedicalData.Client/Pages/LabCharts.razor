@@ -895,7 +895,7 @@
             {
                 var latestDate = historyByDate.Keys.OrderByDescending(d => d).First();
                 var items = historyByDate[latestDate];
-                var body = new { date = latestDate, results = items.Select(x => new { testName = x.TestName, value = x.Value, unit = x.Unit, referenceRange = x.ReferenceRange, isAbnormal = x.IsAbnormal }) };
+                var body = new { date = latestDate, lang = Loc.Lang, results = items.Select(x => new { testName = x.TestName, value = x.Value, unit = x.Unit, referenceRange = x.ReferenceRange, isAbnormal = x.IsAbnormal }) };
                 var resp = await Http.PostAsJsonAsync("/api/LabResult/ai-summary", body);
                 dashAiSummary = resp.IsSuccessStatusCode
                     ? (await resp.Content.ReadFromJsonAsync<AiSummaryResponse>())?.Summary ?? Loc["ai.empty"]
@@ -978,7 +978,7 @@
         isUploadAiLoading = true; uploadAiSummary = null; StateHasChanged();
         try
         {
-            var body = new { date = parsedDate ?? DateTime.Today, results = parsedResults.Select(x => new { testName = x.TestName, value = x.Value, unit = x.Unit, referenceRange = x.ReferenceRange, isAbnormal = x.IsAbnormal }) };
+            var body = new { date = parsedDate ?? DateTime.Today, lang = Loc.Lang, results = parsedResults.Select(x => new { testName = x.TestName, value = x.Value, unit = x.Unit, referenceRange = x.ReferenceRange, isAbnormal = x.IsAbnormal }) };
             var resp = await Http.PostAsJsonAsync("/api/LabResult/ai-summary", body);
             uploadAiSummary = resp.IsSuccessStatusCode
                 ? (await resp.Content.ReadFromJsonAsync<AiSummaryResponse>())?.Summary ?? Loc["ai.empty"]
@@ -1042,7 +1042,7 @@
         loadingAi.Add(date); StateHasChanged();
         try
         {
-            var body = new { date, results = items.Select(x => new { testName = x.TestName, value = x.Value, unit = x.Unit, referenceRange = x.ReferenceRange, isAbnormal = x.IsAbnormal }) };
+            var body = new { date, lang = Loc.Lang, results = items.Select(x => new { testName = x.TestName, value = x.Value, unit = x.Unit, referenceRange = x.ReferenceRange, isAbnormal = x.IsAbnormal }) };
             var resp = await Http.PostAsJsonAsync("/api/LabResult/ai-summary", body);
             aiSummaries[date] = resp.IsSuccessStatusCode
                 ? (await resp.Content.ReadFromJsonAsync<AiSummaryResponse>())?.Summary ?? Loc["ai.empty"]

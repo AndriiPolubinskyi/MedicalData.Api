@@ -4,6 +4,7 @@ public class AiSummaryRequest
 {
     public DateTime Date { get; set; }
     public List<AiSummaryResultItem> Results { get; set; } = new();
+    public string Lang { get; set; } = "uk";
 }
 
 public class AiSummaryResultItem
