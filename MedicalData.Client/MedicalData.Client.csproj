@@ -29,4 +29,15 @@
       <_ContentIncludedByDefault Remove="wwwroot\sample-data\weather.json" />
     </ItemGroup>
 
+    <Target Name="GenerateBuildInfo" BeforeTargets="BeforeBuild">
+        <PropertyGroup>
+            <BuildTimestamp>$([System.DateTime]::UtcNow.ToString("yyyy-MM-dd HH:mm")) UTC</BuildTimestamp>
+            <BuildInfoContent>namespace MedicalData.Client { public static class BuildInfo { public const string BuildAt = "$(BuildTimestamp)"%3B } }</BuildInfoContent>
+        </PropertyGroup>
+        <WriteLinesToFile File="$(IntermediateOutputPath)BuildInfo.cs" Overwrite="true" Lines="$(BuildInfoContent)" />
+        <ItemGroup>
+            <Compile Include="$(IntermediateOutputPath)BuildInfo.cs" />
+        </ItemGroup>
+    </Target>
+
 </Project>
