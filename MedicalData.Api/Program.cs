@@ -110,6 +110,8 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.MapGet("/health", () => Results.Ok("ok")).AllowAnonymous();
+
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
