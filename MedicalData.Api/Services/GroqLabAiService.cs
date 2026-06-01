@@ -13,7 +13,11 @@ public class GroqLabAiService : ILabAiService
             """
             You are a medical information assistant interpreting lab results for a patient.
 
-            Results are grouped by category. Follow these rules strictly:
+            Results are grouped by category. If patient data is provided (sex, age, cycle day) — use it actively:
+            - Apply sex-specific and age-specific reference ranges where they differ (e.g. hormones, hemoglobin, ferritin, creatinine).
+            - For women: if a cycle day is given, apply the appropriate phase-specific norms for hormonal indicators (FSH, LH, estradiol, progesterone, testosterone).
+            - If a value looks abnormal by the general lab range but is within normal limits for this patient's sex/age/cycle phase, say so explicitly.
+            - If patient data is absent, interpret using standard adult ranges.
 
             RESPONSE STRUCTURE:
             - Write ONLY the categories provided in the input. Do not invent new ones.
@@ -23,6 +27,7 @@ public class GroqLabAiService : ILabAiService
             WHAT TO WRITE IN EACH BLOCK:
             - Explain what the key indicator measures and why it matters for health.
             - If abnormal: name the indicator, its value, the reference range, and what it means physiologically.
+            - Where patient context changes the interpretation, state it explicitly (e.g. "For a 35-year-old woman on cycle day 14, this LH level is consistent with ovulation.").
             - If indicators within a category are related (e.g. total cholesterol → LDL → atherogenic index) — explain the connection in one sentence.
 
             REQUIRED:
@@ -35,7 +40,11 @@ public class GroqLabAiService : ILabAiService
             """
             Ты информационный медицинский ассистент, интерпретирующий результаты лабораторных анализов для пациента.
 
-            Результаты уже разбиты по категориям. Следуй этим правилам строго:
+            Если переданы данные пациента (пол, возраст, день цикла) — используй их активно:
+            - Применяй половые и возрастные нормы там, где они отличаются (гормоны, гемоглобин, ферритин, креатинин и др.).
+            - У женщин: если указан день цикла, применяй фазо-специфические нормы для гормональных показателей (ФСГ, ЛГ, эстрадиол, прогестерон, тестостерон).
+            - Если значение выглядит отклонённым по общей лабораторной норме, но укладывается в норму для пола/возраста/фазы цикла пациента — скажи об этом прямо.
+            - Если данные пациента не указаны — интерпретируй по стандартным взрослым нормам.
 
             СТРУКТУРА ОТВЕТА:
             - Пиши ТОЛЬКО те категории, которые переданы во входных данных.
@@ -45,6 +54,7 @@ public class GroqLabAiService : ILabAiService
             ЧТО ПИСАТЬ:
             - Объясни, что измеряет ключевой показатель и зачем он важен.
             - При отклонении: назови показатель, значение, норму и физиологический смысл.
+            - Если контекст пациента меняет интерпретацию — скажи об этом явно (например: «Для женщины 35 лет на 14-й день цикла такой уровень ЛГ соответствует норме овуляции.»).
             - Если показатели связаны — объясни связь одним предложением.
 
             ОБЯЗАТЕЛЬНО:
@@ -57,7 +67,11 @@ public class GroqLabAiService : ILabAiService
             """
             Ти інформаційний медичний асистент, що інтерпретує результати лабораторних аналізів для пацієнта.
 
-            Результати вже згруповані за категоріями. Дотримуйся цих правил суворо:
+            Якщо передані дані пацієнта (стать, вік, день циклу) — використовуй їх активно:
+            - Застосовуй статево- та вікоспецифічні норми там, де вони відрізняються (гормони, гемоглобін, феритин, креатинін тощо).
+            - У жінок: якщо вказаний день циклу, застосовуй фазоспецифічні норми для гормональних показників (ФСГ, ЛГ, естрадіол, прогестерон, тестостерон).
+            - Якщо значення виглядає відхиленим за загальною лабораторною нормою, але вкладається в норму для статі/віку/фази циклу пацієнта — скажи про це прямо.
+            - Якщо дані пацієнта не вказані — інтерпретуй за стандартними дорослими нормами.
 
             СТРУКТУРА ВІДПОВІДІ:
             - Пиши ТІЛЬКИ ті категорії, що передані у вхідних даних.
@@ -67,6 +81,7 @@ public class GroqLabAiService : ILabAiService
             ЩО ПИСАТИ:
             - Поясни, що вимірює ключовий показник і навіщо він важливий для здоров'я.
             - При відхиленні: назви показник, значення, норму та фізіологічний зміст.
+            - Якщо контекст пацієнта змінює інтерпретацію — скажи про це явно (наприклад: «Для жінки 35 років на 14-й день циклу такий рівень ЛГ відповідає нормі овуляції.»).
             - Якщо показники пов'язані — поясни зв'язок одним реченням.
 
             ОБОВ'ЯЗКОВО:
@@ -244,24 +259,30 @@ public class GroqLabAiService : ILabAiService
         {
             "en" => (
                 "You are a medical information assistant. Explain a single lab result to a patient in plain English. " +
-                "If patient data is provided, take age, sex and cycle day into account when interpreting the result and reference ranges. " +
-                "2-3 sentences: what this test measures and what the current value may suggest. " +
-                "If abnormal, explain what it may be associated with. No bullet points, no markdown, plain text only. " +
+                "If patient data is provided (sex, age, cycle day), use it actively: apply sex- and age-specific reference ranges, " +
+                "and for women apply cycle-phase norms for hormonal indicators (FSH, LH, estradiol, progesterone, testosterone). " +
+                "If the value looks abnormal by the general range but is within normal limits for this patient's profile, say so explicitly. " +
+                "2-3 sentences: what this test measures and what the current value means for this specific patient. " +
+                "No bullet points, no markdown, plain text only. " +
                 "Always end with: \"This is general information only and is not a substitute for professional medical advice.\"",
                 $"{patientLine}Test: {testName}\nValue: {value} {unit}\nReference range: {referenceRange}\nStatus: {(isAbnormal ? "ABNORMAL" : "normal")}"
             ),
             "ru" => (
                 "Ты информационный медицинский ассистент. Объясни один показатель анализа пациенту простым языком. " +
-                "Если переданы данные пациента (пол, возраст, день цикла) — учитывай их при интерпретации результата и нормальных диапазонов. " +
-                "2-3 предложения: что измеряет показатель и о чём говорит текущее значение. " +
+                "Если переданы данные пациента (пол, возраст, день цикла) — используй их активно: применяй половые и возрастные нормы, " +
+                "а у женщин при наличии дня цикла — фазо-специфические нормы для гормональных показателей (ФСГ, ЛГ, эстрадиол, прогестерон, тестостерон). " +
+                "Если значение выглядит отклонённым по общей норме, но вписывается в норму для профиля этого пациента — скажи об этом прямо. " +
+                "2-3 предложения: что измеряет показатель и что текущее значение означает именно для этого пациента. " +
                 "Без списков, без markdown, только обычный текст. " +
                 "Всегда заканчивай словами: «Ця інформація є загальноосвітньою і не замінює консультацію лікаря.»",
                 $"{patientLine}Показатель: {testName}\nЗначение: {value} {unit}\nНорма: {referenceRange}\nСтатус: {(isAbnormal ? "ОТКЛОНЕНИЕ" : "в норме")}"
             ),
             _ => (
                 "Ти інформаційний медичний асистент. Поясни один показник аналізу пацієнту простою мовою. " +
-                "Якщо передані дані пацієнта (стать, вік, день циклу) — враховуй їх при інтерпретації результату та нормальних діапазонів. " +
-                "2-3 речення: що вимірює показник і про що свідчить поточне значення. " +
+                "Якщо передані дані пацієнта (стать, вік, день циклу) — використовуй їх активно: застосовуй статево- та вікоспецифічні норми, " +
+                "а у жінок при наявності дня циклу — фазоспецифічні норми для гормональних показників (ФСГ, ЛГ, естрадіол, прогестерон, тестостерон). " +
+                "Якщо значення виглядає відхиленим за загальною нормою, але вкладається в норму для профілю цього пацієнта — скажи про це прямо. " +
+                "2-3 речення: що вимірює показник і що поточне значення означає саме для цього пацієнта. " +
                 "Без списків, без markdown, тільки звичайний текст. " +
                 "Завжди закінчуй словами: «Ця інформація є загальноосвітньою і не замінює консультацію лікаря.»",
                 $"{patientLine}Показник: {testName}\nЗначення: {value} {unit}\nНорма: {referenceRange}\nСтатус: {(isAbnormal ? "ВІДХИЛЕННЯ" : "в нормі")}"

@@ -18,6 +18,13 @@
 
 <div class="page-shell">
 
+    @if (isInitializing)
+    {
+        <div class="page-loading-overlay">
+            <FluentProgressRing Style="width:72px;height:72px;" />
+        </div>
+    }
+
     <!-- ══ NAV ══════════════════════════════════════════ -->
     <nav class="nav">
         <div class="nav-inner">
@@ -853,6 +860,9 @@
     // ── Demo mode ─────────────────────────────────────
     private bool isDemo;
 
+    // ── Init loading ──────────────────────────────────
+    private bool isInitializing = true;
+
     // ── Localization ──────────────────────────────────
     private Action? _locHandler;
 
@@ -911,6 +921,7 @@
             }
         }
         catch (Exception ex) { loadError = ex.Message; }
+        finally { isInitializing = false; }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -1089,7 +1100,9 @@
         shareUrl = null; shareScope = scope;
         var resp = await Http.PostAsJsonAsync("/api/share", new { scope, expiresInDays = (int?)30 });
         if (!resp.IsSuccessStatusCode) return;
-        shareUrl = (await resp.Content.ReadFromJsonAsync<ShareLinkResult>())?.Url;
+        var result = await resp.Content.ReadFromJsonAsync<ShareLinkResult>();
+        if (result?.Token != null)
+            shareUrl = Nav.BaseUri.TrimEnd('/') + "/shared/" + result.Token;
         StateHasChanged();
     }
 
@@ -1098,7 +1111,7 @@
         if (shareUrl != null) await JS.InvokeVoidAsync("navigator.clipboard.writeText", shareUrl);
     }
 
-    private sealed class ShareLinkResult { public string? Url { get; set; } }
+    private sealed class ShareLinkResult { public string? Token { get; set; } public string? Url { get; set; } }
 
     // ── Category filter ───────────────────────────────
     private void OpenCategoryHistory(string categoryName)
