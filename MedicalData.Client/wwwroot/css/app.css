@@ -166,6 +166,31 @@ input, select, textarea { font-family: inherit; }
 .sex-btn:hover:not(.active) { background: rgba(255,255,255,.08); color: var(--text); }
 .profile-saved-msg { font-size: 13px; color: var(--success); }
 
+/* ── Paywall modal ── */
+.paywall-card   { text-align: center; padding: 40px 32px 32px; max-width: 480px; }
+.paywall-icon   { font-size: 48px; margin-bottom: 16px; }
+.paywall-title  { font-size: 22px; font-weight: 700; margin-bottom: 10px; }
+.paywall-sub    { font-size: 14px; color: var(--text-sub); margin-bottom: 28px; line-height: 1.6; }
+.paywall-plans  { display: flex; gap: 12px; margin-bottom: 24px; }
+.paywall-plan   {
+    flex: 1; border: 1px solid var(--border); border-radius: var(--r-sm);
+    padding: 16px 12px; position: relative;
+}
+.paywall-plan--featured {
+    border-color: var(--accent); background: rgba(99,102,241,.08);
+}
+.paywall-plan-badge {
+    position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+    background: var(--accent); color: #fff; font-size: 10px; font-weight: 700;
+    padding: 2px 10px; border-radius: 20px; letter-spacing: .05em; text-transform: uppercase;
+}
+.paywall-plan-name  { font-size: 12px; color: var(--text-sub); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.paywall-plan-price { font-size: 24px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.paywall-plan-hint  { font-size: 11px; color: var(--text-muted); }
+.paywall-contact    { font-size: 13px; color: var(--text-sub); margin-bottom: 20px; }
+.paywall-contact a  { color: var(--accent); text-decoration: none; }
+.paywall-contact a:hover { text-decoration: underline; }
+
 /* ═══════════════════════════════════════════════
    HERO
    ═══════════════════════════════════════════════ */

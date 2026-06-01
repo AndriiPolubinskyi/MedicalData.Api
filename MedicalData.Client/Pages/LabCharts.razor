@@ -111,6 +111,38 @@
         </div>
     }
 
+    <!-- ══ PAYWALL MODAL ════════════════════════════════ -->
+    @if (showPaywall)
+    {
+        <div class="modal-overlay" @onclick="() => showPaywall = false">
+            <div class="modal-card paywall-card" @onclick:stopPropagation>
+                <div class="paywall-icon">✨</div>
+                <h2 class="paywall-title">@Loc["paywall.title"]</h2>
+                <p class="paywall-sub">@Loc["paywall.sub"]</p>
+                <div class="paywall-plans">
+                    <div class="paywall-plan">
+                        <div class="paywall-plan-name">@Loc["paywall.pack3"]</div>
+                        <div class="paywall-plan-price">99 ₴</div>
+                        <div class="paywall-plan-hint">3 @Loc["paywall.credits"]</div>
+                    </div>
+                    <div class="paywall-plan paywall-plan--featured">
+                        <div class="paywall-plan-badge">@Loc["paywall.popular"]</div>
+                        <div class="paywall-plan-name">@Loc["paywall.pack10"]</div>
+                        <div class="paywall-plan-price">249 ₴</div>
+                        <div class="paywall-plan-hint">10 @Loc["paywall.credits"]</div>
+                    </div>
+                    <div class="paywall-plan">
+                        <div class="paywall-plan-name">@Loc["paywall.pack25"]</div>
+                        <div class="paywall-plan-price">499 ₴</div>
+                        <div class="paywall-plan-hint">25 @Loc["paywall.credits"]</div>
+                    </div>
+                </div>
+                <p class="paywall-contact">@Loc["paywall.contact"] <a href="mailto:polubin@gmail.com">polubin@gmail.com</a></p>
+                <button class="btn-ghost" @onclick="() => showPaywall = false">@Loc["paywall.close"]</button>
+            </div>
+        </div>
+    }
+
     <!-- ══ CONTENT ══════════════════════════════════════ -->
     <div class="page-content">
 
@@ -771,6 +803,7 @@
                     sex = ProfileSvc.Current?.Sex, ageYears = ProfileSvc.Current?.AgeYears,
                     cycleDay = ProfileSvc.Current?.CycleDay
                 });
+                if (IsNoCredits(resp)) { showPaywall = true; return; }
                 if (resp.IsSuccessStatusCode)
                 {
                     var obj = await resp.Content.ReadFromJsonAsync<ExplainResponse>();
@@ -862,6 +895,9 @@
 
     // ── Init loading ──────────────────────────────────
     private bool isInitializing = true;
+
+    // ── Paywall ───────────────────────────────────────
+    private bool showPaywall;
 
     // ── Localization ──────────────────────────────────
     private Action? _locHandler;
@@ -978,6 +1014,10 @@
         }
     }
 
+    // ── AI credit helper ──────────────────────────────
+    private bool IsNoCredits(HttpResponseMessage resp) =>
+        (int)resp.StatusCode == 402;
+
     // ── AI summary (unified) ──────────────────────────
     private async Task GetCurrentAiSummaryAsync()
     {
@@ -1003,6 +1043,7 @@
                 var items = historyByDate[latestDate];
                 var body = new { date = latestDate, lang = Loc.Lang, sex = ProfileSvc.Current?.Sex, ageYears = ProfileSvc.Current?.AgeYears, cycleDay = ProfileSvc.Current?.CycleDay, results = items.Select(x => new { testName = x.TestName, value = x.Value, unit = x.Unit, referenceRange = x.ReferenceRange, isAbnormal = x.IsAbnormal }) };
                 var resp = await Http.PostAsJsonAsync("/api/LabResult/ai-summary", body);
+                if (IsNoCredits(resp)) { showPaywall = true; return; }
                 dashAiSummary = resp.IsSuccessStatusCode
                     ? (await resp.Content.ReadFromJsonAsync<AiSummaryResponse>())?.Summary ?? Loc["ai.empty"]
                     : Loc["ai.failed"];
@@ -1086,6 +1127,7 @@
         {
             var body = new { date = parsedDate ?? DateTime.Today, lang = Loc.Lang, results = parsedResults.Select(x => new { testName = x.TestName, value = x.Value, unit = x.Unit, referenceRange = x.ReferenceRange, isAbnormal = x.IsAbnormal }) };
             var resp = await Http.PostAsJsonAsync("/api/LabResult/ai-summary", body);
+            if (IsNoCredits(resp)) { showPaywall = true; return; }
             uploadAiSummary = resp.IsSuccessStatusCode
                 ? (await resp.Content.ReadFromJsonAsync<AiSummaryResponse>())?.Summary ?? Loc["ai.empty"]
                 : Loc["ai.failed"];

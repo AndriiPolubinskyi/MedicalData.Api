@@ -198,6 +198,16 @@ public class LocalizationService(IJSRuntime js)
             ["demo.try"]        = "Спробувати демо",
             ["demo.banner"]     = "Демо-режим — дані приклади, не ваші. Увійдіть, щоб зберегти свої аналізи.",
             ["demo.login"]      = "Увійти",
+
+            ["paywall.title"]   = "AI-кредити вичерпані",
+            ["paywall.sub"]     = "Ви використали всі безкоштовні розшифровки. Поповніть кредити, щоб продовжити.",
+            ["paywall.pack3"]   = "Стартовий",
+            ["paywall.pack10"]  = "Стандарт",
+            ["paywall.pack25"]  = "Про",
+            ["paywall.credits"] = "розшифровки",
+            ["paywall.popular"] = "Популярний",
+            ["paywall.contact"] = "Для оплати пишіть:",
+            ["paywall.close"]   = "Закрити",
         },
 
         ["en"] = new()
@@ -301,6 +311,16 @@ public class LocalizationService(IJSRuntime js)
             ["demo.try"]        = "Try demo",
             ["demo.banner"]     = "Demo mode — sample data only. Sign in to track your own results.",
             ["demo.login"]      = "Sign in",
+
+            ["paywall.title"]   = "AI credits used up",
+            ["paywall.sub"]     = "You've used all your free interpretations. Top up to continue.",
+            ["paywall.pack3"]   = "Starter",
+            ["paywall.pack10"]  = "Standard",
+            ["paywall.pack25"]  = "Pro",
+            ["paywall.credits"] = "interpretations",
+            ["paywall.popular"] = "Popular",
+            ["paywall.contact"] = "To purchase, write to:",
+            ["paywall.close"]   = "Close",
         },
 
         ["ru"] = new()
@@ -404,6 +424,16 @@ public class LocalizationService(IJSRuntime js)
             ["demo.try"]        = "Посмотреть демо",
             ["demo.banner"]     = "Демо-режим — примерные данные. Войдите, чтобы сохранить свои анализы.",
             ["demo.login"]      = "Войти",
+
+            ["paywall.title"]   = "AI-кредиты исчерпаны",
+            ["paywall.sub"]     = "Вы использовали все бесплатные расшифровки. Пополните кредиты, чтобы продолжить.",
+            ["paywall.pack3"]   = "Стартовый",
+            ["paywall.pack10"]  = "Стандарт",
+            ["paywall.pack25"]  = "Про",
+            ["paywall.credits"] = "расшифровки",
+            ["paywall.popular"] = "Популярный",
+            ["paywall.contact"] = "Для оплаты пишите:",
+            ["paywall.close"]   = "Закрыть",
         },
     };
 }

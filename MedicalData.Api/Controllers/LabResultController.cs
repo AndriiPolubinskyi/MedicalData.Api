@@ -21,6 +21,18 @@ public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAge
     private Guid CurrentUserId =>
         Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
+    private async Task<ActionResult?> ConsumeAiCreditAsync(CancellationToken ct)
+    {
+        var user = await context.Users.FindAsync([CurrentUserId], ct);
+        if (user is null) return Unauthorized();
+        if (user.Plan == "unlimited") return null;
+        if (user.AiCreditsLeft <= 0)
+            return StatusCode(402, new { error = "no_credits", creditsLeft = 0 });
+        user.AiCreditsLeft--;
+        await context.SaveChangesAsync(ct);
+        return null;
+    }
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<LabResult>>> GetAll()
     {
@@ -221,7 +233,6 @@ public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAge
         return Ok(results);
     }
 
-    [AllowAnonymous]
     [HttpPost("ai-summary")]
     public async Task<ActionResult> GetAiSummary(
         [FromBody] AiSummaryRequest request,
@@ -229,6 +240,9 @@ public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAge
     {
         if (labAiService is null)
             return StatusCode(503, "AI service not configured.");
+
+        var creditError = await ConsumeAiCreditAsync(cancellationToken);
+        if (creditError is not null) return creditError;
 
         var items = request.Results.Select(x => new AiSummaryItem
         {
@@ -251,7 +265,6 @@ public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAge
         }
     }
 
-    [AllowAnonymous]
     [HttpPost("ai-explain")]
     public async Task<ActionResult> GetAiExplain(
         [FromBody] AiExplainRequest request,
@@ -259,6 +272,10 @@ public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAge
     {
         if (labAiService is null)
             return StatusCode(503, "AI service not configured.");
+
+        var creditError = await ConsumeAiCreditAsync(cancellationToken);
+        if (creditError is not null) return creditError;
+
         try
         {
             var patient = new PatientContext { Sex = request.Sex, AgeYears = request.AgeYears, CycleDay = request.CycleDay };
