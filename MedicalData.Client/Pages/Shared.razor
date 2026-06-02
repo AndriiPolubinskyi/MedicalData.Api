@@ -1,68 +1,139 @@
 @page "/shared/{Token}"
 @inject HttpClient Http
 
-<div style="max-width:900px;margin:24px auto;padding:0 16px;">
+<div class="page-shell" style="min-height:100vh;background:var(--bg);">
 
-@if (loading)
-{
-    <p class="muted">Завантаження…</p>
-}
-else if (error != null)
-{
-    <div style="padding:20px;background:#fff8f8;border:1px solid #fca5a5;border-radius:12px;color:#991b1b;">
-        @error
-    </div>
-}
-else if (data != null)
-{
-    <div class="card">
-        <h2 class="card-title">
-            Аналізи: @data.OwnerName
-            @if (data.Scope == "latest") { <span class="chip chip-ok" style="margin-left:8px;">Останній</span> }
-        </h2>
-
-        @if (data.ExpiresAt.HasValue)
-        {
-            <p class="muted" style="margin:-10px 0 14px;font-size:13px;">
-                Посилання дійсне до @data.ExpiresAt.Value.ToString("dd.MM.yyyy")
-            </p>
-        }
-
-        @foreach (var g in data.Results
-            .GroupBy(r => r.TestDate.Date)
-            .OrderByDescending(grp => grp.Key))
-        {
-            <div style="margin-bottom:20px;">
-                <div class="tl-year-header" style="margin-bottom:8px;">@FormatDate(g.Key)</div>
-                <div style="overflow-x:auto;">
-                    <table class="data-table compact">
-                        <thead>
-                            <tr>
-                                <th>Показник</th>
-                                <th class="right">Значення</th>
-                                <th>Од.</th>
-                                <th>Норма</th>
-                                <th class="center">⚠</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var r in g.OrderBy(x => x.TestName))
-                            {
-                                <tr class="@(r.IsAbnormal ? "row-warn" : "")">
-                                    <td>@r.TestName</td>
-                                    <td class="right @(r.IsAbnormal ? "val-warn" : "")">@r.Value.ToString("G6")</td>
-                                    <td class="muted">@r.Unit</td>
-                                    <td class="muted">@r.ReferenceRange</td>
-                                    <td class="center">@(r.IsAbnormal ? "⚠️" : "✓")</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+    @if (loading)
+    {
+        <div class="page-loading-overlay">
+            <div style="text-align:center;">
+                <div style="width:56px;height:56px;border:3px solid rgba(99,102,241,.2);border-top-color:#6366f1;border-radius:50%;animation:splash-spin .8s linear infinite;margin:0 auto 20px;"></div>
+                @if (attempt > 1)
+                {
+                    <p style="color:#94A3B8;font-size:14px;max-width:240px;">
+                        Сервер прокидається… (@attempt/3)
+                    </p>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <nav class="nav">
+            <div class="nav-inner">
+                <div class="nav-brand">
+                    <div class="nav-brand-icon">❤️</div>
+                    <span>Medical AI</span>
                 </div>
             </div>
-        }
-    </div>
-}
+        </nav>
+
+        <div class="page-content" style="padding-top:32px;">
+
+            @if (error != null)
+            {
+                <div style="max-width:520px;margin:80px auto;text-align:center;">
+                    <div style="font-size:48px;margin-bottom:20px;opacity:.5;">🔌</div>
+                    <div class="section-title" style="margin-bottom:12px;">Не вдалося завантажити</div>
+                    <p style="color:var(--text-sub);font-size:14px;line-height:1.6;margin-bottom:28px;">@error</p>
+                    <button class="btn-primary" @onclick="RetryAsync">🔄 Спробувати ще раз</button>
+                </div>
+            }
+            else if (data != null)
+            {
+                <div style="max-width:900px;margin:0 auto;">
+
+                    <!-- Header card -->
+                    <div class="ai-conclusion-card" style="margin-bottom:28px;">
+                        <div class="ai-conclusion-header">
+                            <div class="ai-conclusion-icon">🔗</div>
+                            <div>
+                                <div class="ai-conclusion-title">Аналізи: @data.OwnerName</div>
+                                @if (data.Scope == "latest")
+                                {
+                                    <div style="font-size:12px;color:#a5b4fc;margin-top:2px;">Останній результат</div>
+                                }
+                                else
+                                {
+                                    <div style="font-size:12px;color:#a5b4fc;margin-top:2px;">Усі результати</div>
+                                }
+                            </div>
+                            @if (data.ExpiresAt.HasValue)
+                            {
+                                <div class="ai-conclusion-badge">до @data.ExpiresAt.Value.ToString("dd.MM.yyyy")</div>
+                            }
+                        </div>
+                        <p style="font-size:13px;color:var(--text-muted);margin:0;">
+                            ⚠ Ця сторінка призначена для перегляду лікарем. Не є медичним висновком.
+                        </p>
+                    </div>
+
+                    <!-- Results grouped by date -->
+                    @foreach (var g in data.Results
+                        .GroupBy(r => r.TestDate.Date)
+                        .OrderByDescending(grp => grp.Key))
+                    {
+                        var abnCount = g.Count(r => r.IsAbnormal);
+                        <div style="margin-bottom:28px;">
+                            <div class="section-header">
+                                <div>
+                                    <div class="section-title">@FormatDate(g.Key)</div>
+                                    <div class="section-sub">@g.Count() показника(ів)</div>
+                                </div>
+                                @if (abnCount > 0)
+                                {
+                                    <span class="chip chip-warn">⚠ @abnCount відхилень</span>
+                                }
+                                else
+                                {
+                                    <span class="chip chip-ok">✓ Все в нормі</span>
+                                }
+                            </div>
+
+                            <div class="indicators-table-wrap">
+                                <table class="indicators-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Показник</th>
+                                            <th class="right">Значення</th>
+                                            <th>Од.</th>
+                                            <th>Норма</th>
+                                            <th class="center">Статус</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var r in g.OrderBy(x => x.TestName))
+                                        {
+                                            <tr class="@(r.IsAbnormal ? "row-abn" : "")">
+                                                <td class="test-name">@r.TestName</td>
+                                                <td class="right @(r.IsAbnormal ? "val-warn" : "val-ok")">@r.Value.ToString("G6")</td>
+                                                <td class="muted">@r.Unit</td>
+                                                <td class="muted">@r.ReferenceRange</td>
+                                                <td class="center">
+                                                    @if (r.IsAbnormal)
+                                                    {
+                                                        <span class="status-chip warn">⚠</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="status-chip ok">✓</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="app-footer" style="margin-top:40px;">
+                        Medical AI · Переглянуто як публічний звіт
+                    </div>
+                </div>
+            }
+        </div>
+    }
 </div>
 
 @code {
@@ -71,28 +142,69 @@ else if (data != null)
     private SharedDataDto? data;
     private bool loading = true;
     private string? error;
+    private int attempt;
 
     private static readonly string[] Months =
         ["січня","лютого","березня","квітня","травня","червня",
          "липня","серпня","вересня","жовтня","листопада","грудня"];
     private static string FormatDate(DateTime d) => $"{d.Day} {Months[d.Month-1]} {d.Year}";
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync() => await FetchAsync();
+
+    private async Task RetryAsync()
     {
-        try
+        loading = true;
+        error = null;
+        data = null;
+        attempt = 0;
+        StateHasChanged();
+        await FetchAsync();
+    }
+
+    private async Task FetchAsync()
+    {
+        const int maxAttempts = 3;
+        const int retryDelayMs = 6000;
+
+        for (attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            var resp = await Http.GetAsync($"/api/share/{Token}");
-            if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
-                error = "Посилання не знайдено або недійсне.";
-            else if ((int)resp.StatusCode == 410)
-                error = "Термін дії посилання закінчився.";
-            else if (!resp.IsSuccessStatusCode)
-                error = "Помилка завантаження даних.";
-            else
+            if (attempt > 1) StateHasChanged();
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(25));
+                var resp = await Http.GetAsync($"/api/share/{Token}", cts.Token);
+
+                if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+                { error = "Посилання не знайдено або недійсне."; break; }
+
+                if ((int)resp.StatusCode == 410)
+                { error = "Термін дії посилання закінчився."; break; }
+
+                if (!resp.IsSuccessStatusCode)
+                { error = "Помилка сервера. Спробуйте пізніше."; break; }
+
                 data = await resp.Content.ReadFromJsonAsync<SharedDataDto>();
+                error = null;
+                break;
+            }
+            catch (OperationCanceledException)
+            {
+                if (attempt < maxAttempts)
+                    await Task.Delay(retryDelayMs);
+                else
+                    error = "Сервер не відповідає. Він може прокидатися — спробуйте через 30 секунд.";
+            }
+            catch
+            {
+                if (attempt < maxAttempts)
+                    await Task.Delay(retryDelayMs);
+                else
+                    error = "Не вдалося підключитись до сервера. Спробуйте через 30 секунд.";
+            }
         }
-        catch { error = "Не вдалося підключитись до сервера."; }
-        finally { loading = false; }
+
+        loading = false;
+        StateHasChanged();
     }
 
     private sealed class SharedDataDto
