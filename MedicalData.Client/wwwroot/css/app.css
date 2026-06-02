@@ -816,7 +816,8 @@ fluent-progress-ring { --neutral-fill-rest: var(--accent); }
 .upload-strip {
     display: flex;
     align-items: center;
-    gap: 16px;
+    justify-content: space-between;
+    gap: 24px;
     background: rgba(99,102,241,.08);
     border: 1px solid rgba(99,102,241,.2);
     border-radius: 14px;
@@ -826,14 +827,13 @@ fluent-progress-ring { --neutral-fill-rest: var(--accent); }
 .upload-strip-hint {
     font-size: 14px;
     color: var(--text-sub);
-    flex: 1;
 }
 
 /* ── Parsed results modal ───────────────────────── */
 .modal-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 200;
+    z-index: 9000;
     background: rgba(2,6,23,.72);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
