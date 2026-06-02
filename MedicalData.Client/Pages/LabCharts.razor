@@ -14,6 +14,7 @@
 @inject AuthStateProvider AuthState
 @inject LocalizationService Loc
 @inject ProfileService ProfileSvc
+@inject ILogger<LabCharts> Logger
 @using MedicalData.Client.Models
 
 <div class="page-shell">
@@ -918,7 +919,7 @@
                 }
             }
         }
-        catch { }
+        catch (Exception ex) { Logger.LogWarning(ex, "AI explain failed: {Test}", item.TestName); }
         finally { displayExplainLoading.Remove(key); StateHasChanged(); }
     }
 
@@ -1081,7 +1082,7 @@
                 StateHasChanged();
             }
         }
-        catch { }
+        catch (Exception ex) { Logger.LogWarning(ex, "OnAfterRender init failed"); }
     }
 
     // ── Data loading ──────────────────────────────────
@@ -1156,7 +1157,7 @@
                     : Loc["ai.failed"];
             }
         }
-        catch { dashAiSummary = Loc["ai.error"]; }
+        catch (Exception ex) { Logger.LogError(ex, "Dash AI summary failed"); dashAiSummary = Loc["ai.error"]; }
         finally { isDashAiLoading = false; StateHasChanged(); }
     }
 
@@ -1177,7 +1178,10 @@
         uploadAiSummary = null;
         displayExplainTexts.Clear();
         if (selectedFile != null)
+        {
+            Logger.LogInformation("PDF selected: {Name}, {SizeKb} KB", selectedFile.Name, selectedFile.Size / 1024);
             await ParsePdfAsync();
+        }
     }
 
     private async Task ParsePdfAsync()
@@ -1185,6 +1189,7 @@
         if (selectedFile is null) return;
         isParsing = true; uploadMsg = null; uploadError = false;
         parsedResults = null; parsedDate = null;
+        Logger.LogInformation("Parsing PDF: {Name}", selectedFile.Name);
         try
         {
             using var form = new MultipartFormDataContent();
@@ -1197,20 +1202,31 @@
             var resp = await Http.PostAsync("/api/LabResult/upload-pdf", form);
             if (!resp.IsSuccessStatusCode)
             {
-                uploadMsg = $"{(int)resp.StatusCode}: {await resp.Content.ReadAsStringAsync()}";
+                var body = await resp.Content.ReadAsStringAsync();
+                Logger.LogWarning("PDF parse failed: {Status} {Body}", (int)resp.StatusCode, body);
+                uploadMsg = $"{(int)resp.StatusCode}: {body}";
                 uploadError = true; return;
             }
             var parsed    = await resp.Content.ReadFromJsonAsync<UploadPdfLabResultsResponse>();
             parsedResults = parsed?.Results ?? [];
             parsedDate    = parsed?.Date;
+            Logger.LogInformation("PDF parsed: {Count} results, date {Date}", parsedResults.Count, parsedDate);
             uploadMsg     = parsedResults.Count == 0
                 ? Loc["upload.notFound"]
                 : Loc.Format("upload.found", parsedResults.Count);
             uploadError = parsedResults.Count == 0;
             showFullSummary = false;
         }
-        catch (IOException) { uploadMsg = Loc["upload.tooLarge"]; uploadError = true; }
-        catch (Exception ex) { uploadMsg = Loc.Format("upload.error", ex.Message); uploadError = true; }
+        catch (IOException ex)
+        {
+            Logger.LogWarning(ex, "PDF too large: {Name}", selectedFile.Name);
+            uploadMsg = Loc["upload.tooLarge"]; uploadError = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "PDF parse error: {Name}", selectedFile.Name);
+            uploadMsg = Loc.Format("upload.error", ex.Message); uploadError = true;
+        }
         finally { isParsing = false; }
     }
 
@@ -1218,16 +1234,26 @@
     {
         if (parsedResults is null or { Count: 0 }) return;
         isSaving = true; uploadMsg = null; uploadError = false;
+        Logger.LogInformation("Saving {Count} results, date {Date}", parsedResults.Count, parsedDate);
         try
         {
             var body = new { date = parsedDate ?? DateTime.Today, results = parsedResults.Select(x => new { testName = x.TestName, value = x.Value, unit = x.Unit, referenceRange = x.ReferenceRange, isAbnormal = x.IsAbnormal }) };
             var resp = await Http.PostAsJsonAsync("/api/LabResult/save-parsed", body);
-            if (!resp.IsSuccessStatusCode) { uploadMsg = Loc.Format("upload.saveFailed", (int)resp.StatusCode); uploadError = true; return; }
+            if (!resp.IsSuccessStatusCode)
+            {
+                Logger.LogWarning("Save failed: {Status}", (int)resp.StatusCode);
+                uploadMsg = Loc.Format("upload.saveFailed", (int)resp.StatusCode); uploadError = true; return;
+            }
+            Logger.LogInformation("Saved {Count} results successfully", parsedResults.Count);
             uploadMsg = Loc.Format("upload.saved", parsedResults.Count);
             parsedResults = null; selectedFile = null;
             await Task.WhenAll(LoadHistoryAsync(), LoadLabTypesAsync());
         }
-        catch (Exception ex) { uploadMsg = Loc.Format("upload.error", ex.Message); uploadError = true; }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Save error");
+            uploadMsg = Loc.Format("upload.error", ex.Message); uploadError = true;
+        }
         finally { isSaving = false; }
     }
 
@@ -1244,7 +1270,7 @@
                 ? (await resp.Content.ReadFromJsonAsync<AiSummaryResponse>())?.Summary ?? Loc["ai.empty"]
                 : Loc["ai.failed"];
         }
-        catch { uploadAiSummary = Loc["ai.error"]; }
+        catch (Exception ex) { Logger.LogError(ex, "Upload AI summary failed"); uploadAiSummary = Loc["ai.error"]; }
         finally { isUploadAiLoading = false; StateHasChanged(); }
     }
 
@@ -1311,7 +1337,7 @@
                 : Loc["ai.failed"];
             if (!openDates.Contains(date)) openDates.Add(date);
         }
-        catch { aiSummaries[date] = Loc["ai.error"]; }
+        catch (Exception ex) { Logger.LogError(ex, "AI summary failed for date {Date}", date); aiSummaries[date] = Loc["ai.error"]; }
         finally { loadingAi.Remove(date); StateHasChanged(); }
     }
 

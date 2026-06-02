@@ -35,4 +35,6 @@ builder.Services.AddScoped<ProfileService>();
 // ── UI ────────────────────────────────────────────────────────────────────────
 builder.Services.AddFluentUIComponents();
 
+builder.Logging.SetMinimumLevel(LogLevel.Information);
+
 await builder.Build().RunAsync();
