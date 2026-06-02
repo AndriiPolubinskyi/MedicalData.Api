@@ -818,15 +818,18 @@ fluent-progress-ring { --neutral-fill-rest: var(--accent); }
     align-items: center;
     justify-content: space-between;
     gap: 24px;
+    width: 100%;
     background: rgba(99,102,241,.08);
     border: 1px solid rgba(99,102,241,.2);
     border-radius: 14px;
     padding: 14px 20px;
     margin-bottom: 24px;
+    box-sizing: border-box;
 }
 .upload-strip-hint {
     font-size: 14px;
     color: var(--text-sub);
+    flex-shrink: 0;
 }
 
 /* ── Parsed results modal ───────────────────────── */
