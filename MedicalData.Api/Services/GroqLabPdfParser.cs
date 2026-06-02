@@ -110,6 +110,7 @@ public class GroqLabPdfParser : ILabPdfAgentParser
             },
             response_format = new { type = "json_object" },
             temperature = 0,
+            max_tokens = 8000,
         };
 
         var request = new HttpRequestMessage(HttpMethod.Post, "https://api.groq.com/openai/v1/chat/completions")
@@ -122,7 +123,35 @@ public class GroqLabPdfParser : ILabPdfAgentParser
         httpResponse.EnsureSuccessStatusCode();
 
         var responseJson = await httpResponse.Content.ReadAsStringAsync(cancellationToken);
-        var json = ExtractGroqText(responseJson);
+        var (json, truncated) = ExtractGroqText(responseJson);
+
+        // If the response was cut off mid-JSON (e.g. very large PDF), retry with a higher limit
+        if (truncated && !string.IsNullOrWhiteSpace(json))
+        {
+            var retryBody = new
+            {
+                model = _model,
+                messages = new[]
+                {
+                    new { role = "system", content = SystemPrompt },
+                    new { role = "user", content = $"Parse this lab report and return JSON:\n\n{text}" },
+                },
+                response_format = new { type = "json_object" },
+                temperature = 0,
+                max_tokens = 32000,
+            };
+            var retryReq = new HttpRequestMessage(HttpMethod.Post, "https://api.groq.com/openai/v1/chat/completions")
+            {
+                Headers = { Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _apiKey) },
+                Content = new StringContent(JsonSerializer.Serialize(retryBody), Encoding.UTF8, "application/json"),
+            };
+            var retryResp = await _http.SendAsync(retryReq, cancellationToken);
+            if (retryResp.IsSuccessStatusCode)
+            {
+                (json, _) = ExtractGroqText(await retryResp.Content.ReadAsStringAsync(cancellationToken));
+            }
+        }
+
         return ParseResponse(json);
     }
 
@@ -150,8 +179,9 @@ public class GroqLabPdfParser : ILabPdfAgentParser
         if (words.Count == 0)
             return page.Text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
-        // Tolerance of 3 points groups words at the same visual height
-        const double rowTolerance = 3.0;
+        // Tolerance of 5 points groups words at the same visual height.
+        // Some clinics (e.g. Клініка Денис) have slight Y variation between columns.
+        const double rowTolerance = 5.0;
 
         var rows = words
             .GroupBy(w => Math.Round(w.BoundingBox.Bottom / rowTolerance) * rowTolerance)
@@ -163,20 +193,19 @@ public class GroqLabPdfParser : ILabPdfAgentParser
         return rows;
     }
 
-    private static string ExtractGroqText(string responseJson)
+    private static (string text, bool truncated) ExtractGroqText(string responseJson)
     {
         try
         {
             using var doc = JsonDocument.Parse(responseJson);
-            return doc.RootElement
-                .GetProperty("choices")[0]
-                .GetProperty("message")
-                .GetProperty("content")
-                .GetString() ?? "";
+            var choice = doc.RootElement.GetProperty("choices")[0];
+            var text = choice.GetProperty("message").GetProperty("content").GetString() ?? "";
+            var finishReason = choice.TryGetProperty("finish_reason", out var fr) ? fr.GetString() : null;
+            return (text, finishReason == "length");
         }
         catch
         {
-            return "";
+            return ("", false);
         }
     }
 
