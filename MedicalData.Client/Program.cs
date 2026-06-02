@@ -4,6 +4,18 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.FluentUI.AspNetCore.Components;
+using Serilog;
+using Serilog.Events;
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .Enrich.WithProperty("App", "MedicalData.Client")
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext} {Message:lj}{NewLine}{Exception}",
+        theme: Serilog.Sinks.SystemConsole.Themes.AnsiConsoleTheme.None)
+    .CreateLogger();
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -35,6 +47,7 @@ builder.Services.AddScoped<ProfileService>();
 // ── UI ────────────────────────────────────────────────────────────────────────
 builder.Services.AddFluentUIComponents();
 
-builder.Logging.SetMinimumLevel(LogLevel.Information);
+builder.Logging.ClearProviders();
+builder.Logging.AddSerilog();
 
 await builder.Build().RunAsync();
