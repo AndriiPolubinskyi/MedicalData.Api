@@ -34,9 +34,9 @@
             </div>
 
             <div class="nav-links">
-                <button class="nav-link @(pageView == PageView.Main    ? "active" : "")" @onclick="() => pageView = PageView.Main">🏠 @Loc["tab.dashboard"]</button>
-                <button class="nav-link @(pageView == PageView.History ? "active" : "")" @onclick="() => pageView = PageView.History">📅 @Loc["tab.history"]</button>
-                <button class="nav-link @(pageView == PageView.Charts  ? "active" : "")" @onclick="() => pageView = PageView.Charts">📈 @Loc["tab.charts"]</button>
+                <button class="nav-link @(pageView == PageView.Main    ? "active" : "")" @onclick="() => pageView = PageView.Main">@Loc["tab.dashboard"]</button>
+                <button class="nav-link @(pageView == PageView.History ? "active" : "")" @onclick="() => pageView = PageView.History">@Loc["tab.history"]</button>
+                <button class="nav-link @(pageView == PageView.Charts  ? "active" : "")" @onclick="() => pageView = PageView.Charts">@Loc["tab.charts"]</button>
             </div>
 
             <div class="nav-right">
@@ -100,7 +100,7 @@
 
                 <div class="modal-footer">
                     <button class="btn-primary" @onclick="SaveProfileAsync" disabled="@profileSaving">
-                        @(profileSaving ? "⏳" : "💾") @Loc["profile.save"]
+                        @(profileSaving ? Loc["upload.saving"] : Loc["profile.save"])
                     </button>
                     @if (profileSaved)
                     {
@@ -178,18 +178,25 @@
                         <div class="hero-actions">
                             @if (!isDemo)
                             {
-                                <label class="btn-hero" style="cursor:pointer;position:relative;overflow:hidden;">
-                                    <span>📎</span>
-                                    <span>@(isParsing ? Loc["upload.parsing"] : Loc["upload.parse"])</span>
-                                    <InputFile OnChange="OnFileSelected" accept=".pdf,application/pdf"
-                                               style="position:absolute;inset:0;opacity:0;cursor:pointer;" />
-                                </label>
-                                @if (selectedFile != null && !isParsing)
+                                @if (isParsing)
                                 {
-                                    <button class="btn-hero" @onclick="ParsePdfAsync" disabled="@isParsing">
-                                        <span>🔍</span> @Loc["upload.parse"]
-                                    </button>
+                                    <div class="loading-row" style="padding:14px 0;">
+                                        <FluentProgressRing Style="width:22px;height:22px;" />
+                                        @Loc["upload.parsing"]
+                                    </div>
                                 }
+                                else
+                                {
+                                    <label class="btn-hero" style="cursor:pointer;position:relative;overflow:hidden;">
+                                        @Loc["upload.parse"]
+                                        <InputFile OnChange="OnFileSelected" accept=".pdf,application/pdf"
+                                                   style="position:absolute;inset:0;opacity:0;cursor:pointer;" />
+                                    </label>
+                                }
+                            }
+                            @if (!string.IsNullOrWhiteSpace(uploadMsg))
+                            {
+                                <p class="@(uploadError ? "msg-err" : "msg-ok")" style="margin-top:8px;">@uploadMsg</p>
                             }
                             <p class="hero-labs">Підтримуються Synevo, Діла, CSD, Invivo та інші лабораторії</p>
                         </div>
@@ -237,10 +244,6 @@
                     </div>
                 </section>
 
-                @if (!string.IsNullOrWhiteSpace(uploadMsg))
-                {
-                    <p class="@(uploadError ? "msg-err" : "msg-ok")" style="text-align:center;">@uploadMsg</p>
-                }
             }
             else
             {
@@ -250,24 +253,25 @@
                 {
                     <!-- Compact upload bar -->
                     <div class="upload-compact-bar">
-                        <span style="font-size:18px;">📎</span>
                         <span class="upload-file-name">@(selectedFile?.Name ?? Loc["upload.choose"])</span>
-                        <label class="btn-ghost" style="cursor:pointer;position:relative;overflow:hidden;">
-                            @Loc["upload.choose"]
-                            <InputFile OnChange="OnFileSelected" accept=".pdf,application/pdf"
-                                       style="position:absolute;inset:0;opacity:0;cursor:pointer;" />
-                        </label>
-                        @if (selectedFile != null)
+                        @if (isParsing)
                         {
-                            <button class="btn-primary" @onclick="ParsePdfAsync" disabled="@isParsing">
-                                @(isParsing ? Loc["upload.parsing"] : Loc["upload.parse"])
-                            </button>
+                            <FluentProgressRing Style="width:20px;height:20px;flex-shrink:0;" />
+                            <span style="font-size:13px;color:var(--text-muted);white-space:nowrap;">@Loc["upload.parsing"]</span>
                         }
-                        @if (parsedResults is { Count: > 0 })
+                        else
                         {
-                            <button class="btn-primary" @onclick="SaveAsync" disabled="@isSaving">
-                                💾 @(isSaving ? Loc["upload.saving"] : Loc["upload.save"])
-                            </button>
+                            <label class="btn-ghost" style="cursor:pointer;position:relative;overflow:hidden;">
+                                @Loc["upload.choose"]
+                                <InputFile OnChange="OnFileSelected" accept=".pdf,application/pdf"
+                                           style="position:absolute;inset:0;opacity:0;cursor:pointer;" />
+                            </label>
+                            @if (parsedResults is { Count: > 0 })
+                            {
+                                <button class="btn-primary" @onclick="SaveAsync" disabled="@isSaving">
+                                    @(isSaving ? Loc["upload.saving"] : Loc["upload.save"])
+                                </button>
+                            }
                         }
                     </div>
                     @if (!string.IsNullOrWhiteSpace(uploadMsg))
@@ -297,7 +301,7 @@
                 <!-- ── AI CONCLUSION ──────────────────── -->
                 <div class="ai-conclusion-card">
                     <div class="ai-conclusion-header">
-                        <div class="ai-conclusion-icon">🤖</div>
+                        <div class="ai-conclusion-icon" style="font-size:13px;font-weight:700;letter-spacing:-.02em;">AI</div>
                         <div class="ai-conclusion-title">@Loc["ai.conclusion"]</div>
                         <div class="ai-conclusion-badge">AI</div>
                     </div>
@@ -325,7 +329,7 @@
                     <div class="ai-conclusion-actions">
                         @if (!CurrentSummaryLoading && string.IsNullOrWhiteSpace(CurrentSummary))
                         {
-                            <button class="btn-primary" @onclick="GetCurrentAiSummaryAsync">🤖 @Loc["ai.btn"]</button>
+                            <button class="btn-primary" @onclick="GetCurrentAiSummaryAsync">@Loc["ai.btn"]</button>
                         }
                         @if (!string.IsNullOrWhiteSpace(CurrentSummary) && !CurrentSummaryLoading)
                         {
@@ -569,7 +573,7 @@
                                 <span @onclick:stopPropagation="true" style="display:flex;gap:6px;margin-left:auto;">
                                     <button class="btn-ghost" style="padding:6px 10px;font-size:12px;"
                                             @onclick="() => GetAiSummaryAsync(date, items)" disabled="@isLoading">
-                                        @(isLoading ? "⏳" : Loc["ai.short"])
+                                        @Loc["ai.short"]
                                     </button>
                                     @if (!isDemo)
                                     {
@@ -592,7 +596,7 @@
                                     {
                                         <div class="ai-conclusion-card" style="margin:16px 0;">
                                             <div class="ai-conclusion-header">
-                                                <div class="ai-conclusion-icon" style="width:30px;height:30px;font-size:14px;">🤖</div>
+                                                <div class="ai-conclusion-icon" style="width:30px;height:30px;font-size:11px;font-weight:700;">AI</div>
                                                 <div class="ai-conclusion-title" style="font-size:14px;">AI висновок</div>
                                             </div>
                                             <div class="ai-conclusion-text" style="font-size:13px;">@dateSumm</div>
@@ -1065,11 +1069,16 @@
     };
 
     // ── Upload logic ──────────────────────────────────
-    private Task OnFileSelected(InputFileChangeEventArgs e)
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
     {
-        selectedFile = e.File; parsedResults = null; uploadMsg = null;
-        uploadError = false; uploadAiSummary = null; displayExplainTexts.Clear();
-        return Task.CompletedTask;
+        selectedFile = e.File;
+        parsedResults = null;
+        uploadMsg = null;
+        uploadError = false;
+        uploadAiSummary = null;
+        displayExplainTexts.Clear();
+        if (selectedFile != null)
+            await ParsePdfAsync();
     }
 
     private async Task ParsePdfAsync()
