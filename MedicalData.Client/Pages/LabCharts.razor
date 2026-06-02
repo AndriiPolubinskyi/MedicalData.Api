@@ -162,12 +162,12 @@
         <!-- ══ MAIN PAGE ══════════════════════════════════ -->
         @if (pageView == PageView.Main)
         {
-            @if (historyByDate is null && parsedResults is null)
+            @if (historyByDate is null)
             {
                 <!-- Loading -->
                 <div class="loading-row"><FluentProgressRing Style="width:22px;height:22px;" /> @Loc["loading"]</div>
             }
-            else if (!HasData && parsedResults is null)
+            else if (!HasData)
             {
                 <!-- ── HERO ────────────────────────────── -->
                 <section class="hero">
@@ -247,37 +247,29 @@
             }
             else
             {
-                <!-- ── RESULTS VIEW (has data or parsedResults) ── -->
+                <!-- ── DASHBOARD (historical data) ─────── -->
 
+                <!-- ── UPLOAD STRIP ───────────────────── -->
                 @if (!isDemo)
                 {
-                    <!-- Compact upload bar -->
-                    <div class="upload-compact-bar">
-                        <span class="upload-file-name">@(selectedFile?.Name ?? Loc["upload.choose"])</span>
+                    <div class="upload-strip">
                         @if (isParsing)
                         {
-                            <FluentProgressRing Style="width:20px;height:20px;flex-shrink:0;" />
-                            <span style="font-size:13px;color:var(--text-muted);white-space:nowrap;">@Loc["upload.parsing"]</span>
+                            <div class="loading-row" style="padding:0;">
+                                <FluentProgressRing Style="width:18px;height:18px;" />
+                                @Loc["upload.parsing"]
+                            </div>
                         }
                         else
                         {
-                            <label class="btn-ghost" style="cursor:pointer;position:relative;overflow:hidden;">
-                                @Loc["upload.choose"]
+                            <span class="upload-strip-hint">Оновити результати:</span>
+                            <label class="btn-primary" style="cursor:pointer;position:relative;overflow:hidden;font-size:14px;padding:9px 20px;">
+                                Завантажити PDF
                                 <InputFile OnChange="OnFileSelected" accept=".pdf,application/pdf"
                                            style="position:absolute;inset:0;opacity:0;cursor:pointer;" />
                             </label>
-                            @if (parsedResults is { Count: > 0 })
-                            {
-                                <button class="btn-primary" @onclick="SaveAsync" disabled="@isSaving">
-                                    @(isSaving ? Loc["upload.saving"] : Loc["upload.save"])
-                                </button>
-                            }
                         }
                     </div>
-                    @if (!string.IsNullOrWhiteSpace(uploadMsg))
-                    {
-                        <p class="@(uploadError ? "msg-err" : "msg-ok")">@uploadMsg</p>
-                    }
                 }
 
                 <!-- ── STATS ──────────────────────────── -->
@@ -305,33 +297,29 @@
                         <div class="ai-conclusion-title">@Loc["ai.conclusion"]</div>
                         <div class="ai-conclusion-badge">AI</div>
                     </div>
-                    @if (CurrentSummaryLoading)
+                    @if (isDashAiLoading)
                     {
                         <div class="loading-row"><FluentProgressRing Style="width:18px;height:18px;" /> @Loc["generating"]</div>
                     }
-                    else if (!string.IsNullOrWhiteSpace(CurrentSummary))
+                    else if (!string.IsNullOrWhiteSpace(dashAiSummary))
                     {
-                        <div class="ai-conclusion-text">@(showFullSummary ? CurrentSummary : FirstParagraph(CurrentSummary))</div>
+                        <div class="ai-conclusion-text">@(showFullSummary ? dashAiSummary : FirstParagraph(dashAiSummary))</div>
                     }
                     else
                     {
                         <div class="ai-conclusion-placeholder">
                             @if (CurrentAbnormal?.Count > 0)
-                            {
-                                @($"{CurrentAbnormal.Count} {Loc["ai.deviation.summary"]}")
-                            }
+                            { @($"{CurrentAbnormal.Count} {Loc["ai.deviation.summary"]}") }
                             else
-                            {
-                                @Loc["ai.normal.summary"]
-                            }
+                            { @Loc["ai.normal.summary"] }
                         </div>
                     }
                     <div class="ai-conclusion-actions">
-                        @if (!CurrentSummaryLoading && string.IsNullOrWhiteSpace(CurrentSummary))
+                        @if (!isDashAiLoading && string.IsNullOrWhiteSpace(dashAiSummary))
                         {
                             <button class="btn-primary" @onclick="GetCurrentAiSummaryAsync">@Loc["ai.btn"]</button>
                         }
-                        @if (!string.IsNullOrWhiteSpace(CurrentSummary) && !CurrentSummaryLoading)
+                        @if (!string.IsNullOrWhiteSpace(dashAiSummary) && !isDashAiLoading)
                         {
                             <button class="btn-ghost" @onclick="() => showFullSummary = !showFullSummary">
                                 @(showFullSummary ? "Згорнути" : "Читати повний висновок")
@@ -393,13 +381,13 @@
                             <div class="section-title">Усі показники</div>
                             <div class="section-sub">@CurrentItems?.Count показника(ів) · @(CurrentDate.HasValue ? Loc.FormatDate(CurrentDate.Value) : "")</div>
                         </div>
-                        @if (!isDemo && HasData && parsedResults == null)
-                        {
-                            <div style="display:flex;gap:8px;">
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            @if (!isDemo)
+                            {
                                 <button class="btn-ghost" @onclick='() => OpenShare("latest")'>@Loc["share.latest"]</button>
                                 <button class="btn-ghost" @onclick='() => OpenShare("all")'>@Loc["share.all"]</button>
-                            </div>
-                        }
+                            }
+                        </div>
                     </div>
 
                     @if (!isDemo && shareUrl != null)
@@ -436,18 +424,12 @@
                                         <td class="muted">@item.Unit</td>
                                         <td class="muted">@item.ReferenceRange</td>
                                         <td class="center">
-                                            @if (item.IsAbnormal)
-                                            {
-                                                <span class="status-chip warn">@Loc["status.warn"]</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="status-chip ok">@Loc["status.ok"]</span>
-                                            }
+                                            @if (item.IsAbnormal) { <span class="status-chip warn">@Loc["status.warn"]</span> }
+                                            else { <span class="status-chip ok">@Loc["status.ok"]</span> }
                                         </td>
                                         <td class="center">
                                             <button class="btn-explain-sm" @onclick="() => ExplainDisplayItemAsync(item)" disabled="@isEL" title="@Loc["ai.explain"]">
-                                                @(isEL ? "⏳" : "🤖")
+                                                @(isEL ? "·" : "AI")
                                             </button>
                                         </td>
                                     </tr>
@@ -456,7 +438,6 @@
                                         <tr class="tbl-explain-row">
                                             <td colspan="6">
                                                 <div class="tbl-explain-cell">
-                                                    <span>🤖</span>
                                                     <span style="flex:1;">@et</span>
                                                     <button class="explain-close-btn" @onclick="() => displayExplainTexts.Remove(ek)">✕</button>
                                                 </div>
@@ -469,8 +450,8 @@
                     </div>
                 </section>
 
-                <!-- ── CATEGORY CARDS (from history) ─── -->
-                @if (HasData && categoryCards is { Count: > 0 } && parsedResults == null)
+                <!-- ── CATEGORY CARDS ─────────────────── -->
+                @if (HasData && categoryCards is { Count: > 0 })
                 {
                     <div class="section-header" style="margin-top:40px;">
                         <div class="section-title">@Loc["section.categories"]</div>
@@ -708,6 +689,124 @@
         }
 
     </div><!-- /page-content -->
+
+    <!-- ══ PARSING SPINNER (global) ══════════════════ -->
+    @if (isParsing)
+    {
+        <div class="page-loading-overlay">
+            <div style="width:56px;height:56px;border:3px solid rgba(99,102,241,.2);border-top-color:#6366f1;border-radius:50%;animation:splash-spin .8s linear infinite;"></div>
+        </div>
+    }
+
+    <!-- ══ PARSED RESULTS MODAL ══════════════════════ -->
+    @if (parsedResults != null && !isDemo)
+    {
+        var parsedAbn = parsedResults.Count(r => r.IsAbnormal);
+        <div class="modal-backdrop" @onclick="DiscardParsed">
+            <div class="modal-sheet" @onclick:stopPropagation>
+
+                <!-- Modal header -->
+                <div class="modal-header">
+                    <div>
+                        <div class="modal-title">Розпізнано @parsedResults.Count показника(ів)</div>
+                        <div class="modal-sub">
+                            @(selectedFile?.Name ?? "")
+                            @if (parsedDate.HasValue) { <span> · @Loc.FormatDate(parsedDate.Value)</span> }
+                        </div>
+                    </div>
+                    <button class="modal-close-btn" @onclick="DiscardParsed">✕</button>
+                </div>
+
+                <!-- Stats strip -->
+                <div class="modal-stats">
+                    <div class="modal-stat">
+                        <span class="modal-stat-label">Дата аналізу</span>
+                        <span class="modal-stat-val">@(parsedDate.HasValue ? Loc.FormatDate(parsedDate.Value) : "—")</span>
+                    </div>
+                    <div class="modal-stat">
+                        <span class="modal-stat-label">Показників</span>
+                        <span class="modal-stat-val">@parsedResults.Count</span>
+                    </div>
+                    <div class="modal-stat">
+                        <span class="modal-stat-label">Відхилень</span>
+                        <span class="modal-stat-val @(parsedAbn > 0 ? "warn" : "ok")">@(parsedAbn > 0 ? $"⚠ {parsedAbn}" : "0 ✓")</span>
+                    </div>
+                </div>
+
+                <!-- AI analysis strip -->
+                <div class="modal-ai-strip">
+                    @if (isUploadAiLoading)
+                    {
+                        <div class="loading-row" style="padding:0;">
+                            <FluentProgressRing Style="width:16px;height:16px;" />
+                            @Loc["generating"]
+                        </div>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(uploadAiSummary))
+                    {
+                        <div class="modal-ai-text">@uploadAiSummary</div>
+                    }
+                    else
+                    {
+                        <button class="btn-primary" style="font-size:13px;padding:8px 18px;" @onclick="GetUploadAiSummaryAsync">
+                            Розібрати аналіз AI
+                        </button>
+                    }
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(uploadMsg))
+                {
+                    <div class="modal-msg @(uploadError ? "msg-err" : "msg-ok")">@uploadMsg</div>
+                }
+
+                <!-- Scrollable table body -->
+                <div class="modal-body">
+                    <div class="indicators-table-wrap" style="margin:0;">
+                        <table class="indicators-table">
+                            <thead>
+                                <tr>
+                                    <th>@Loc["tbl.indicator"]</th>
+                                    <th class="right">@Loc["tbl.value"]</th>
+                                    <th>@Loc["tbl.unit"]</th>
+                                    <th>@Loc["tbl.range"]</th>
+                                    <th class="center">@Loc["col.status"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var m in parsedResults.OrderBy(x => x.TestName))
+                                {
+                                    <tr class="@(m.IsAbnormal ? "row-abn" : "")">
+                                        <td class="test-name">@m.TestName</td>
+                                        <td class="right @(m.IsAbnormal ? "val-warn" : "val-ok")">@m.Value.ToString("G6")</td>
+                                        <td class="muted">@m.Unit</td>
+                                        <td class="muted">@m.ReferenceRange</td>
+                                        <td class="center">
+                                            @if (m.IsAbnormal) { <span class="status-chip warn">@Loc["status.warn"]</span> }
+                                            else { <span class="status-chip ok">@Loc["status.ok"]</span> }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer">
+                    <label class="btn-ghost" style="cursor:pointer;position:relative;overflow:hidden;">
+                        Інший PDF
+                        <InputFile OnChange="OnFileSelected" accept=".pdf,application/pdf"
+                                   style="position:absolute;inset:0;opacity:0;cursor:pointer;" />
+                    </label>
+                    <button class="btn-ghost" @onclick="DiscardParsed">Скасувати</button>
+                    <button class="btn-primary" @onclick="SaveAsync" disabled="@isSaving">
+                        @(isSaving ? Loc["upload.saving"] : $"Додати {parsedResults.Count} показників")
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    }
 
     <footer class="app-footer">
         Medical AI · v0.1 · @BuildInfo.BuildAt
@@ -1446,6 +1545,16 @@
         "Інфекційна серологія"      => 5,
         _                           => 99
     };
+
+    private void DiscardParsed()
+    {
+        parsedResults = null;
+        selectedFile = null;
+        uploadMsg = null;
+        uploadAiSummary = null;
+        displayExplainTexts.Clear();
+        showFullSummary = false;
+    }
 
     // ── Local models ──────────────────────────────────
     private sealed class AiSummaryResponse { public string? Summary { get; set; } }
