@@ -128,6 +128,8 @@ public class LocalizationService(IJSRuntime js)
             ["empty.noData"]       = "Немає аналізів. Завантажте перший PDF!",
             ["empty.upload"]       = "📄 Завантажити PDF",
 
+            ["upload.strip.hint"]  = "Оновити результати:",
+            ["upload.strip.btn"]   = "Завантажити PDF",
             ["upload.title"]       = "Завантаження PDF аналізів",
             ["upload.choose"]      = "Оберіть PDF файл",
             ["upload.hint"]        = "PDF до 5 МБ",
@@ -241,6 +243,8 @@ public class LocalizationService(IJSRuntime js)
             ["empty.noData"]       = "No tests yet. Upload your first PDF!",
             ["empty.upload"]       = "📄 Upload PDF",
 
+            ["upload.strip.hint"]  = "Update results:",
+            ["upload.strip.btn"]   = "Upload PDF",
             ["upload.title"]       = "Upload PDF Lab Results",
             ["upload.choose"]      = "Choose a PDF file",
             ["upload.hint"]        = "PDF up to 5 MB",
@@ -354,6 +358,8 @@ public class LocalizationService(IJSRuntime js)
             ["empty.noData"]       = "Нет анализов. Загрузите первый PDF!",
             ["empty.upload"]       = "📄 Загрузить PDF",
 
+            ["upload.strip.hint"]  = "Обновить результаты:",
+            ["upload.strip.btn"]   = "Загрузить PDF",
             ["upload.title"]       = "Загрузка PDF анализов",
             ["upload.choose"]      = "Выберите PDF файл",
             ["upload.hint"]        = "PDF до 5 МБ",

@@ -816,19 +816,26 @@ fluent-progress-ring { --neutral-fill-rest: var(--accent); }
 .upload-strip {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 24px;
+    gap: 16px;
     width: 100%;
+    box-sizing: border-box;
     background: rgba(99,102,241,.08);
     border: 1px solid rgba(99,102,241,.2);
     border-radius: 14px;
     padding: 14px 20px;
     margin-bottom: 24px;
-    box-sizing: border-box;
 }
 .upload-strip-hint {
     font-size: 14px;
     color: var(--text-sub);
+    white-space: nowrap;
+}
+.btn-upload-label {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 9px 20px;
     flex-shrink: 0;
 }
 
