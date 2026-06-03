@@ -56,11 +56,11 @@ public class ShareController(AppDbContext db, IConfiguration config) : Controlle
 
         IQueryable<LabResult> query = db.LabResults.Where(r => r.UserId == shareToken.UserId);
 
-        query = shareToken.Scope switch
+        if (shareToken.Scope == "latest")
         {
-            "latest" => query.Where(r => r.TestDate == query.Max(x => x.TestDate)),
-            _        => query
-        };
+            var maxDate = await query.MaxAsync(x => x.TestDate, ct);
+            query = query.Where(r => r.TestDate == maxDate);
+        }
 
         var results = await query
             .OrderBy(r => r.TestDate).ThenBy(r => r.TestName)
