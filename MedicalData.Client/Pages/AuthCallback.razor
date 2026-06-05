@@ -21,7 +21,7 @@
         {
             await Auth.SetTokenAsync(token!);
             AuthState.NotifyChanged();
-            Nav.NavigateTo("/");
+            Nav.NavigateTo("/app");
         }
         else
         {
