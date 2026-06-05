@@ -205,7 +205,8 @@ public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAge
                 Value = x.Value,
                 Unit = x.Unit,
                 ReferenceRange = x.ReferenceRange,
-                IsAbnormal = x.IsAbnormal
+                IsAbnormal = x.IsAbnormal,
+                GroupName = GroupDetectionService.DetectGroupName(x.TestName),
             }).ToList()
         };
 

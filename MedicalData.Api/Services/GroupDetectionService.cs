@@ -25,6 +25,16 @@ public static class GroupDetectionService
         (2, ["гемоглобін", "еритроцит", "гематокрит", "лейкоцит", "нейтрофіл", "мієлоцит", "лімфоцит", "моноцит", "базофіл", "еозинофіл", "тромбоцит", "шое", "esr", " wbc", " rbc", " plt", "mcv", "mchc", " mch", "rdw", "mpv", "pct)", "pdw", "віроцит", "плазматичн"]),
     ];
 
+    public static readonly Dictionary<int, string> GroupNames = new()
+    {
+        [1] = "Ліпідний профіль",
+        [2] = "Загальний аналіз крові",
+        [3] = "Глюкоза та обмін",
+        [4] = "Печінка та біохімія",
+        [5] = "Гормони",
+        [6] = "Простата / ПСА",
+    };
+
     public static int? Detect(string testName)
     {
         var lower = testName.ToLowerInvariant();
@@ -34,5 +44,11 @@ public static class GroupDetectionService
                 return groupId;
         }
         return null;
+    }
+
+    public static string? DetectGroupName(string testName)
+    {
+        var id = Detect(testName);
+        return id.HasValue ? GroupNames.GetValueOrDefault(id.Value) : null;
     }
 }

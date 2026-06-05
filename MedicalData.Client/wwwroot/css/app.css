@@ -1362,3 +1362,16 @@ fluent-progress-ring { --neutral-fill-rest: var(--accent); }
     background: rgba(99,102,241,.12);
     color: var(--text-sub);
 }
+
+/* ── Modal group header ─────────────────────────── */
+.modal-group-header {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 14px 4px 6px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2px;
+}
+.modal-group-header:first-child { padding-top: 4px; }

@@ -14,4 +14,5 @@ public class ParsedLabMetric
     public string Unit { get; set; } = string.Empty;
     public string ReferenceRange { get; set; } = string.Empty;
     public bool IsAbnormal { get; set; }
+    public string? GroupName { get; set; }
 }

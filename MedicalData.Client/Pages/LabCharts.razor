@@ -797,36 +797,45 @@
                     <div class="modal-msg @(uploadError ? "msg-err" : "msg-ok")">@uploadMsg</div>
                 }
 
-                <!-- Scrollable table body -->
+                <!-- Scrollable table body — grouped by category -->
                 <div class="modal-body">
-                    <div class="indicators-table-wrap" style="margin:0;">
-                        <table class="indicators-table">
-                            <thead>
-                                <tr>
-                                    <th>@Loc["tbl.indicator"]</th>
-                                    <th class="right">@Loc["tbl.value"]</th>
-                                    <th>@Loc["tbl.unit"]</th>
-                                    <th>@Loc["tbl.range"]</th>
-                                    <th class="center">@Loc["col.status"]</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var m in parsedResults.OrderBy(x => x.TestName))
-                                {
-                                    <tr class="@(m.IsAbnormal ? "row-abn" : "")">
-                                        <td class="test-name">@m.TestName</td>
-                                        <td class="right @(m.IsAbnormal ? "val-warn" : "val-ok")">@m.Value.ToString("G6")</td>
-                                        <td class="muted">@m.Unit</td>
-                                        <td class="muted">@m.ReferenceRange</td>
-                                        <td class="center">
-                                            @if (m.IsAbnormal) { <span class="status-chip warn">@Loc["status.warn"]</span> }
-                                            else { <span class="status-chip ok">@Loc["status.ok"]</span> }
-                                        </td>
+                    @{
+                        var grouped = parsedResults
+                            .GroupBy(r => r.GroupName ?? "Інше")
+                            .OrderBy(g => g.Key == "Інше" ? "zzz" : g.Key);
+                    }
+                    @foreach (var grp in grouped)
+                    {
+                        <div class="modal-group-header">@grp.Key</div>
+                        <div class="indicators-table-wrap" style="margin:0 0 8px;">
+                            <table class="indicators-table">
+                                <thead>
+                                    <tr>
+                                        <th>@Loc["tbl.indicator"]</th>
+                                        <th class="right">@Loc["tbl.value"]</th>
+                                        <th>@Loc["tbl.unit"]</th>
+                                        <th>@Loc["tbl.range"]</th>
+                                        <th class="center">@Loc["col.status"]</th>
                                     </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    @foreach (var m in grp.OrderBy(x => x.TestName))
+                                    {
+                                        <tr class="@(m.IsAbnormal ? "row-abn" : "")">
+                                            <td class="test-name">@m.TestName</td>
+                                            <td class="right @(m.IsAbnormal ? "val-warn" : "val-ok")">@m.Value.ToString("G6")</td>
+                                            <td class="muted">@m.Unit</td>
+                                            <td class="muted">@m.ReferenceRange</td>
+                                            <td class="center">
+                                                @if (m.IsAbnormal) { <span class="status-chip warn">@Loc["status.warn"]</span> }
+                                                else { <span class="status-chip ok">@Loc["status.ok"]</span> }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
                 </div>
 
                 <!-- Footer -->
