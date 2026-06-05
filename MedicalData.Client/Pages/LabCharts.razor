@@ -3,9 +3,7 @@
 @layout BlankLayout
 @implements IDisposable
 @using MedicalData.Client.Models
-@using Plotly.Blazor
-@using Plotly.Blazor.LayoutLib
-@using Plotly.Blazor.Traces
+@using ApexCharts
 @using System.Security.Claims
 @inject HttpClient Http
 @inject NavigationManager Nav
@@ -678,11 +676,20 @@
                             }
                         }
                     </select>
-                    @if (chart != null)
+                    @if (apexData != null)
                     {
-                        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;">
-                            <PlotlyChart Config="@chart.Config" Layout="@chart.Layout"
-                                         Data="@chart.Data" @ref="chart" @key="chartVersion" />
+                        <div class="apex-chart-wrap" @key="chartVersion">
+                            <ApexChart TItem="ChartPoint"
+                                       Options="@apexOptions"
+                                       @ref="apexChart">
+                                <ApexPointSeries TItem="ChartPoint"
+                                                 Items="@apexData"
+                                                 Name="@selectedTestName"
+                                                 SeriesType="SeriesType.Area"
+                                                 XValue="@(e => e.Date)"
+                                                 YValue="@(e => (decimal?)e.Value)"
+                                                 OrderBy="@(e => e.X)" />
+                            </ApexChart>
                         </div>
                     }
                 }
@@ -992,8 +999,13 @@
     // ── Charts ────────────────────────────────────────
     private List<string>? labTypes;
     private Dictionary<string, List<string>>? labTypeGroups;
-    private PlotlyChart? chart;
+    private ApexChart<ChartPoint>? apexChart;
+    private List<ChartPoint>? apexData;
+    private ApexChartOptions<ChartPoint>? apexOptions;
+    private string selectedTestName = "";
     private int chartVersion;
+
+    private record ChartPoint(string Date, double Value);
 
     // ── Error state ───────────────────────────────────
     private string? loadError;
@@ -1345,7 +1357,7 @@
     private async Task OnTestSelected(ChangeEventArgs e)
     {
         var name = e.Value?.ToString();
-        if (string.IsNullOrEmpty(name)) { chart = null; return; }
+        if (string.IsNullOrEmpty(name)) { apexData = null; return; }
 
         List<LabResult>? results;
         if (isDemo)
@@ -1358,36 +1370,117 @@
             results = await Http.GetFromJsonAsync<List<LabResult>>(
                 $"/api/LabResult/labresults?testName={Uri.EscapeDataString(name)}");
         }
-        if (results is not { Count: > 0 }) { chart = null; return; }
+        if (results is not { Count: > 0 }) { apexData = null; return; }
 
         var ordered  = results.OrderBy(r => r.TestDate).ToList();
         var refRange = ordered.FirstOrDefault(x => !string.IsNullOrEmpty(x.ReferenceRange))?.ReferenceRange ?? "";
 
-        chart = new PlotlyChart
-        {
-            Data = [new Scatter
-            {
-                Name = refRange,
-                Mode = Plotly.Blazor.Traces.ScatterLib.ModeFlag.Lines | Plotly.Blazor.Traces.ScatterLib.ModeFlag.Markers,
-                X    = ordered.Select(r => (object)r.TestDate.ToString("dd.MM.yy")).ToList(),
-                Y    = ordered.Select(r => (object)r.Value).ToList(),
-                Line = new Plotly.Blazor.Traces.ScatterLib.Line { Color = "#6366f1" },
-                Marker = new Plotly.Blazor.Traces.ScatterLib.Marker { Size = 8 },
-            }],
-            Layout = new Layout
-            {
-                Title   = new Title { Text = name },
-                XAxis   = [new() { Title = new Plotly.Blazor.LayoutLib.XAxisLib.Title { Text = Loc["charts.xLabel"] } }],
-                YAxis   = [new() { Title = new Plotly.Blazor.LayoutLib.YAxisLib.Title { Text = refRange } }],
-                Margin  = new Margin { L = 60, R = 20, T = 50, B = 60 },
-                PaperBgColor = "rgba(0,0,0,0)",
-                PlotBgColor  = "rgba(0,0,0,0)",
-                Font = new Plotly.Blazor.LayoutLib.Font { Color = "#94A3B8" },
-            },
-            Config = new Plotly.Blazor.Config { Responsive = true }
-        };
+        selectedTestName = name;
+        apexData   = ordered.Select(r => new ChartPoint(r.TestDate.ToString("dd.MM.yy"), r.Value)).ToList();
+        apexOptions = BuildChartOptions(refRange);
         chartVersion++;
         StateHasChanged();
+    }
+
+    private ApexChartOptions<ChartPoint> BuildChartOptions(string refRange)
+    {
+        double? refLo = null, refHi = null;
+        if (!string.IsNullOrEmpty(refRange))
+        {
+            // try dash separator (skip leading minus for negative numbers)
+            int sep = refRange.IndexOf('–');
+            if (sep < 0) sep = refRange.IndexOf('-', 1);
+            if (sep > 0 &&
+                double.TryParse(refRange[..sep].Trim(), System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out var lo) &&
+                double.TryParse(refRange[(sep + 1)..].Trim(), System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out var hi))
+            { refLo = lo; refHi = hi; }
+        }
+
+        var annotations = new Annotations();
+        if (refLo.HasValue && refHi.HasValue)
+        {
+            annotations.Yaxis =
+            [
+                new AnnotationsYAxis
+                {
+                    Y           = (object)refLo.Value,
+                    Y2          = (object)refHi.Value,
+                    FillColor   = "#22C55E",
+                    Opacity     = 0.08,
+                    BorderColor = "transparent",
+                    Label       = new Label
+                    {
+                        Text  = refRange,
+                        Style = new Style { Background = "rgba(34,197,94,.15)", Color = "#4ade80", FontSize = "11px" }
+                    }
+                }
+            ];
+        }
+
+        return new ApexChartOptions<ChartPoint>
+        {
+            Chart = new Chart
+            {
+                Background = "transparent",
+                ForeColor  = "#94A3B8",
+                Height     = "100%",
+                Toolbar    = new Toolbar { Show = false },
+                Zoom       = new Zoom { Enabled = false },
+                Animations = new Animations
+                {
+                    Enabled          = true,
+                    Speed            = 700,
+                    AnimateGradually = new AnimateGradually { Enabled = true, Delay = 80 }
+                }
+            },
+            Theme  = new Theme { Mode = ApexCharts.Mode.Dark },
+            Stroke = new Stroke { Curve = [Curve.Smooth], Width = [3] },
+            Fill   = new Fill
+            {
+                Type     = [FillType.Gradient],
+                Gradient = new FillGradient
+                {
+                    ShadeIntensity = 1,
+                    Type           = GradientType.Vertical,
+                    OpacityFrom    = 0.35,
+                    OpacityTo      = 0.0,
+                    Stops          = [0, 95, 100]
+                }
+            },
+            Markers = new Markers
+            {
+                Size        = 6.0,
+                StrokeWidth = 0.0,
+                FillOpacity = 1.0,
+                Hover       = new MarkersHover { Size = 9 }
+            },
+            Colors = ["#6366f1"],
+            Grid   = new Grid
+            {
+                BorderColor     = "rgba(255,255,255,0.06)",
+                StrokeDashArray = 4,
+                Padding         = new Padding { Left = 8, Right = 16, Top = 0, Bottom = 0 }
+            },
+            Tooltip = new Tooltip { Theme = ApexCharts.Mode.Dark },
+            Xaxis   = new XAxis
+            {
+                Type       = XAxisType.Category,
+                Labels     = new XAxisLabels { Style = new AxisLabelStyle { Colors = "#64748B", FontSize = "12px" } },
+                AxisBorder = new AxisBorder { Show = false },
+                AxisTicks  = new AxisTicks { Show = false }
+            },
+            Yaxis =
+            [
+                new YAxis
+                {
+                    Labels     = new YAxisLabels { Style = new AxisLabelStyle { Colors = "#64748B", FontSize = "12px" } },
+                    TickAmount = 5
+                }
+            ],
+            Annotations = annotations
+        };
     }
 
     // ── Logout ────────────────────────────────────────

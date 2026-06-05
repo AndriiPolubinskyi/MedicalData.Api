@@ -991,6 +991,49 @@ fluent-progress-ring { --neutral-fill-rest: var(--accent); }
 }
 
 /* ═══════════════════════════════════════════════
+   APEX CHART
+   ═══════════════════════════════════════════════ */
+.apex-chart-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 24px 16px 16px;
+    margin-top: 20px;
+    height: 360px;
+    display: flex;
+    flex-direction: column;
+}
+.apex-chart-wrap > * {
+    flex: 1;
+    min-height: 0;
+}
+/* Override ApexCharts internal styles for dark theme */
+.apex-chart-wrap .apexcharts-tooltip {
+    background: var(--card2) !important;
+    border: 1px solid var(--border-light) !important;
+    border-radius: var(--r-xs) !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4) !important;
+}
+.apex-chart-wrap .apexcharts-tooltip-title {
+    background: rgba(99,102,241,.12) !important;
+    border-bottom: 1px solid var(--border) !important;
+    color: var(--text) !important;
+    font-weight: 600 !important;
+    font-size: 12px !important;
+}
+.apex-chart-wrap .apexcharts-tooltip-text {
+    color: var(--text) !important;
+}
+.apex-chart-wrap .apexcharts-xaxistooltip {
+    background: var(--card2) !important;
+    border: 1px solid var(--border-light) !important;
+    color: var(--text-sub) !important;
+}
+.apex-chart-wrap .apexcharts-marker {
+    filter: drop-shadow(0 0 6px rgba(99,102,241,.6));
+}
+
+/* ═══════════════════════════════════════════════
    LANDING PAGE
    ═══════════════════════════════════════════════ */
 
