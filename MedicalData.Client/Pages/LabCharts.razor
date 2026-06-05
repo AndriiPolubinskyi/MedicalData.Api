@@ -661,9 +661,38 @@
                 }
                 else
                 {
+                    @if (groupedTypes is { Count: > 0 })
+                    {
+                        <div class="group-tabs">
+                            <button class="group-tab @(selectedGroupFilter == null ? "active" : "")"
+                                    @onclick="SelectAllGroups">
+                                @Loc["charts.all"]
+                            </button>
+                            @foreach (var g in groupedTypes)
+                            {
+                                var gCopy = g;
+                                <button class="group-tab @(selectedGroupFilter == gCopy.Name ? "active" : "")"
+                                        style="@(selectedGroupFilter == gCopy.Name ? $"--tab-color:{gCopy.Color}" : "")"
+                                        @onclick="() => SelectGroup(gCopy.Name)">
+                                    @GetGroupDisplayName(gCopy)
+                                    <span class="group-tab-count">@gCopy.Tests.Count</span>
+                                </button>
+                            }
+                        </div>
+                    }
+
                     <select class="chart-select" @onchange="OnTestSelected">
                         <option value="">@Loc["charts.select"]</option>
-                        @if (labTypeGroups != null)
+                        @foreach (var g in FilteredGroups)
+                        {
+                            <optgroup label="@GetGroupDisplayName(g)">
+                                @foreach (var name in g.Tests)
+                                {
+                                    <option value="@name">@name</option>
+                                }
+                            </optgroup>
+                        }
+                        @if (groupedTypes is null && labTypeGroups != null)
                         {
                             @foreach (var (group, names) in labTypeGroups)
                             {
@@ -676,6 +705,7 @@
                             }
                         }
                     </select>
+
                     @if (apexData != null)
                     {
                         <div class="apex-chart-wrap" @key="chartVersion">
@@ -999,6 +1029,8 @@
     // ── Charts ────────────────────────────────────────
     private List<string>? labTypes;
     private Dictionary<string, List<string>>? labTypeGroups;
+    private List<TestGroupDto>? groupedTypes;
+    private string? selectedGroupFilter;
     private ApexChart<ChartPoint>? apexChart;
     private List<ChartPoint>? apexData;
     private ApexChartOptions<ChartPoint>? apexOptions;
@@ -1006,6 +1038,19 @@
     private int chartVersion;
 
     private record ChartPoint(string Date, double Value);
+    private record TestGroupDto(int? Id, string Name, string NameEn, string NameRu, string Icon, string Color, List<string> Tests);
+
+    private IEnumerable<TestGroupDto> FilteredGroups =>
+        groupedTypes is null ? []
+        : selectedGroupFilter is null ? groupedTypes
+        : groupedTypes.Where(g => g.Name == selectedGroupFilter);
+
+    private string GetGroupDisplayName(TestGroupDto g) => Loc.Lang switch
+    {
+        "en" => g.NameEn,
+        "ru" => g.NameRu,
+        _    => g.Name,
+    };
 
     // ── Error state ───────────────────────────────────
     private string? loadError;
@@ -1124,13 +1169,22 @@
 
     private async Task LoadLabTypesAsync()
     {
-        labTypes = await Http.GetFromJsonAsync<List<string>>("/api/LabResult/labtypes");
-        if (labTypes != null)
+        groupedTypes = await Http.GetFromJsonAsync<List<TestGroupDto>>("/api/LabResult/labtypes/grouped");
+        if (groupedTypes != null)
         {
-            labTypeGroups = labTypes
-                .GroupBy(GetLabGroup)
-                .OrderBy(g => LabGroupOrder(g.Key))
-                .ToDictionary(g => g.Key, g => g.OrderBy(x => x).ToList());
+            labTypes = groupedTypes.SelectMany(g => g.Tests).ToList();
+            labTypeGroups = groupedTypes
+                .Where(g => g.Tests.Count > 0)
+                .ToDictionary(g => g.Name, g => g.Tests);
+        }
+        else
+        {
+            labTypes = await Http.GetFromJsonAsync<List<string>>("/api/LabResult/labtypes");
+            if (labTypes != null)
+                labTypeGroups = labTypes
+                    .GroupBy(GetLabGroup)
+                    .OrderBy(g => LabGroupOrder(g.Key))
+                    .ToDictionary(g => g.Key, g => g.OrderBy(x => x).ToList());
         }
     }
 
@@ -1354,6 +1408,20 @@
     }
 
     // ── Chart logic ───────────────────────────────────
+    private void SelectAllGroups()
+    {
+        selectedGroupFilter = null;
+        selectedTestName = "";
+        apexData = null;
+    }
+
+    private void SelectGroup(string name)
+    {
+        selectedGroupFilter = name;
+        selectedTestName = "";
+        apexData = null;
+    }
+
     private async Task OnTestSelected(ChangeEventArgs e)
     {
         var name = e.Value?.ToString();

@@ -87,6 +87,44 @@ public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAge
             .GroupBy(x => x.TestName).Select(x => x.Key).ToListAsync();
     }
 
+    [HttpGet("labtypes/grouped")]
+    public async Task<ActionResult<IEnumerable<object>>> GetGroupedTypes()
+    {
+        var uid = CurrentUserId;
+        var groups = await context.TestGroups
+            .OrderBy(g => g.Order)
+            .Select(g => new
+            {
+                g.Id,
+                g.Name,
+                g.NameEn,
+                g.NameRu,
+                g.Icon,
+                g.Color,
+                Tests = context.LabResults
+                    .Where(r => r.UserId == uid && r.GroupId == g.Id)
+                    .Select(r => r.TestName)
+                    .Distinct()
+                    .OrderBy(n => n)
+                    .ToList()
+            })
+            .ToListAsync();
+
+        // Tests not assigned to any group
+        var ungrouped = await context.LabResults
+            .Where(r => r.UserId == uid && r.GroupId == null)
+            .Select(r => r.TestName)
+            .Distinct()
+            .OrderBy(n => n)
+            .ToListAsync();
+
+        var result = groups.Where(g => g.Tests.Count > 0).ToList<object>();
+        if (ungrouped.Count > 0)
+            result.Add(new { Id = (int?)null, Name = "Інше", NameEn = "Other", NameRu = "Прочее", Icon = "other", Color = "#64748b", Tests = ungrouped });
+
+        return Ok(result);
+    }
+
     [HttpGet("labresults")]
     public async Task<ActionResult<IEnumerable<LabResult>>> GetAllResultsByTestName(string testName)
     {
@@ -466,6 +504,7 @@ public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAge
                 ReferenceRange = string.IsNullOrWhiteSpace(metric.ReferenceRange) ? metadata?.ReferenceRange ?? string.Empty : metric.ReferenceRange,
                 IsAbnormal = metric.IsAbnormal || LabResultHelper.IsOutOfRange(metric.Value, metric.ReferenceRange),
                 UserId = userId,
+                GroupId = GroupDetectionService.Detect(metric.TestName),
             };
         }).ToList();
 

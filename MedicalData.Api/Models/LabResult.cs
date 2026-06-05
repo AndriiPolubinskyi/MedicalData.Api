@@ -12,4 +12,6 @@ public class LabResult
     public bool IsAbnormal { get; set; }
     public Guid? UserId { get; set; }
     public User? User { get; set; }
+    public int? GroupId { get; set; }
+    public TestGroup? Group { get; set; }
 }

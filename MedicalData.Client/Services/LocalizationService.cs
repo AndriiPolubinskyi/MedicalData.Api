@@ -183,6 +183,7 @@ public class LocalizationService(IJSRuntime js)
             ["charts.empty"]    = "Немає даних. Спочатку завантажте аналізи.",
             ["charts.select"]   = "— оберіть показник —",
             ["charts.xLabel"]   = "Дата",
+            ["charts.all"]      = "Всі",
 
             ["profile.title"]       = "Мій профіль",
             ["profile.sex"]         = "Стать",
@@ -337,6 +338,7 @@ public class LocalizationService(IJSRuntime js)
             ["charts.empty"]    = "No data. Upload tests first.",
             ["charts.select"]   = "— select a metric —",
             ["charts.xLabel"]   = "Date",
+            ["charts.all"]      = "All",
 
             ["profile.title"]       = "My Profile",
             ["profile.sex"]         = "Sex",
@@ -491,6 +493,7 @@ public class LocalizationService(IJSRuntime js)
             ["charts.empty"]    = "Нет данных. Сначала загрузите анализы.",
             ["charts.select"]   = "— выберите показатель —",
             ["charts.xLabel"]   = "Дата",
+            ["charts.all"]      = "Все",
 
             ["profile.title"]       = "Мой профиль",
             ["profile.sex"]         = "Пол",

@@ -11,6 +11,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ShareToken> ShareTokens { get; set; }
     public DbSet<UserProfile> UserProfiles { get; set; }
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = null!;
+    public DbSet<TestGroup> TestGroups { get; set; }
+    public DbSet<TestGroupMapping> TestGroupMappings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -35,6 +37,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasOne<UserProfile>()
             .WithOne(p => p.User)
             .HasForeignKey<UserProfile>(p => p.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        model.Entity<TestGroup>()
+            .HasMany(g => g.LabResults)
+            .WithOne(r => r.Group)
+            .HasForeignKey(r => r.GroupId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        model.Entity<TestGroup>()
+            .HasMany(g => g.Mappings)
+            .WithOne(m => m.Group)
+            .HasForeignKey(m => m.GroupId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

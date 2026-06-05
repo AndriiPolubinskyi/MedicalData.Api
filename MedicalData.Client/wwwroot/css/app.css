@@ -1317,3 +1317,48 @@ fluent-progress-ring { --neutral-fill-rest: var(--accent); }
     .lp-section { padding: 60px 0; }
     .lp-footer-links { gap: 16px; }
 }
+
+/* ── Chart group tabs ───────────────────────────── */
+.group-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+.group-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-sub);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 180ms var(--ease);
+    white-space: nowrap;
+}
+.group-tab:hover {
+    border-color: rgba(99,102,241,.4);
+    color: var(--text);
+    background: rgba(99,102,241,.06);
+}
+.group-tab.active {
+    background: var(--tab-color, #6366f1);
+    border-color: transparent;
+    color: #fff;
+    font-weight: 600;
+}
+.group-tab-count {
+    font-size: 11px;
+    opacity: .75;
+    background: rgba(255,255,255,.2);
+    border-radius: 10px;
+    padding: 1px 6px;
+}
+.group-tab:not(.active) .group-tab-count {
+    background: rgba(99,102,241,.12);
+    color: var(--text-sub);
+}
