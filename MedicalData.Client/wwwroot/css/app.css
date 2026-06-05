@@ -1149,6 +1149,116 @@ fluent-progress-ring { --neutral-fill-rest: var(--accent); }
     .lp-footer-links a:hover { color: var(--text); }
 }
 
+/* ── Interactive effects ── */
+
+/* Feature cards: shimmer sweep + tilt lift + icon spring */
+.lp-features .lp-feature {
+    position: relative; overflow: hidden;
+    transition: transform 320ms var(--ease), box-shadow 320ms var(--ease), border-color 220ms var(--ease);
+    will-change: transform;
+}
+.lp-features .lp-feature::after {
+    content: '';
+    position: absolute; top: 0; left: -80%; width: 50%; height: 100%;
+    background: linear-gradient(105deg, transparent 0%, rgba(255,255,255,.06) 50%, transparent 100%);
+    transform: skewX(-12deg);
+    transition: left 600ms ease;
+    pointer-events: none;
+}
+@media (hover: hover) and (pointer: fine) {
+    .lp-features .lp-feature:hover {
+        transform: translateY(-6px) rotate(-0.5deg);
+        box-shadow: 0 24px 52px rgba(0,0,0,.45), 0 0 0 1px rgba(99,102,241,.3);
+        border-color: rgba(99,102,241,.35);
+    }
+    .lp-features .lp-feature:hover::after { left: 150%; }
+    .lp-features .lp-feature:hover .lp-feature-icon { transform: scale(1.12) rotate(-8deg); }
+    .lp-features .lp-feature:nth-child(even):hover { rotate: 0.5deg; }
+}
+.lp-features .lp-feature .lp-feature-icon { transition: transform 300ms var(--spring); }
+
+/* Feature cards stagger entrance */
+.lp-features .lp-feature { animation: card-in 360ms var(--ease) both; }
+.lp-features .lp-feature:nth-child(1) { animation-delay: 0ms; }
+.lp-features .lp-feature:nth-child(2) { animation-delay: 70ms; }
+.lp-features .lp-feature:nth-child(3) { animation-delay: 140ms; }
+.lp-features .lp-feature:nth-child(4) { animation-delay: 210ms; }
+
+/* Step icons: spring scale + glow */
+.lp-step-icon { transition: transform 280ms var(--spring), box-shadow 280ms var(--ease); }
+.lp-step-title { transition: color 200ms var(--ease); }
+@media (hover: hover) and (pointer: fine) {
+    .lp-step:hover .lp-step-icon {
+        transform: scale(1.15);
+        box-shadow: 0 0 28px rgba(99,102,241,.45);
+    }
+    .lp-step:hover .lp-step-title { color: #a5b4fc; }
+}
+
+/* Hero PDF card: 3D tilt on container hover */
+.hero-pdf-card {
+    transition: transform 450ms var(--ease), box-shadow 450ms var(--ease);
+}
+@media (hover: hover) and (pointer: fine) {
+    .lp-hero-visual:hover .hero-pdf-card {
+        transform: perspective(900px) rotateY(-10deg) rotateX(6deg) translateY(-8px);
+        box-shadow: 28px 44px 80px rgba(0,0,0,.6), 0 0 56px rgba(99,102,241,.14);
+    }
+}
+
+/* Trust logos: bounce lift */
+.lp-trust-logos span {
+    display: inline-block;
+    transition: color 150ms var(--ease), transform 220ms var(--spring);
+    cursor: default;
+}
+@media (hover: hover) and (pointer: fine) {
+    .lp-trust-logos span:hover { color: var(--text); transform: translateY(-4px); }
+}
+
+/* CTA box: pulsing glow border */
+@keyframes cta-pulse {
+    0%, 100% { border-color: rgba(99,102,241,.2); box-shadow: none; }
+    50%       { border-color: rgba(99,102,241,.5); box-shadow: 0 0 48px rgba(99,102,241,.12); }
+}
+.lp-cta-inner { animation: cta-pulse 5s ease-in-out infinite; }
+
+/* Nav logo: spring rotate on hover */
+.lp-brand .nav-brand-icon {
+    transition: transform 280ms var(--spring), box-shadow 280ms var(--ease);
+}
+@media (hover: hover) and (pointer: fine) {
+    .lp-brand:hover .nav-brand-icon {
+        transform: rotate(-10deg) scale(1.1);
+        box-shadow: 0 0 22px var(--accent-glow);
+    }
+}
+
+/* Hero content stagger entrance */
+@keyframes hero-in {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.lp-hero-content > * { animation: hero-in 480ms var(--ease) both; }
+.lp-hero-content > *:nth-child(1) { animation-delay: 0ms; }
+.lp-hero-content > *:nth-child(2) { animation-delay: 80ms; }
+.lp-hero-content > *:nth-child(3) { animation-delay: 150ms; }
+.lp-hero-content > *:nth-child(4) { animation-delay: 220ms; }
+.lp-hero-content > *:nth-child(5) { animation-delay: 280ms; }
+.lp-hero-visual { animation: hero-in 560ms var(--ease) 100ms both; }
+
+/* Metric rows: highlight on card hover */
+.hero-pdf-card .hero-metric-row {
+    transition: background 200ms var(--ease), padding-left 200ms var(--ease);
+    border-radius: 4px;
+}
+@media (hover: hover) and (pointer: fine) {
+    .hero-pdf-card:hover .hero-metric-row:hover {
+        background: rgba(255,255,255,.04);
+        padding-left: 4px;
+    }
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
     .lp-hero { padding: 60px 0 40px; }
