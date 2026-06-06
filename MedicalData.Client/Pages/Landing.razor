@@ -285,7 +285,9 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
-            await JS.InvokeVoidAsync("hideSeoShell");
+        {
+            try { await JS.InvokeVoidAsync("hideSeoShell"); } catch { }
+        }
     }
 
     private async Task SwitchLangAsync(string lang) => await Loc.SetLangAsync(lang);
