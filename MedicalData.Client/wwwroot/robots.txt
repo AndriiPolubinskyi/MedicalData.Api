@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /demo
+Disallow: /login
+Disallow: /app
+Disallow: /auth/
+Disallow: /shared/
+
+Sitemap: https://medicaldata-client.onrender.com/sitemap.xml

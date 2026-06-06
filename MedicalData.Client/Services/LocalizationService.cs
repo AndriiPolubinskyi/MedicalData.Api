@@ -143,6 +143,12 @@ public class LocalizationService(IJSRuntime js)
             ["upload.saved"]       = "✅ Збережено {0} показників.",
             ["upload.saveFailed"]  = "Помилка збереження: {0}",
             ["upload.error"]       = "Помилка: {0}",
+            ["upload.duplicate"]        = "Ці аналізи вже є в базі ({0} показників збігаються).",
+            ["upload.forceAdd"]         = "Все рівно зберегти",
+            ["upload.err.encrypted"]    = "PDF захищено паролем. Збережіть копію без пароля і спробуйте знову.",
+            ["upload.err.scanned"]      = "PDF містить тільки відскановане зображення — текстового шару немає. Спробуйте PDF з вибираємим текстом (не скан).",
+            ["upload.err.no_metrics"]   = "Текст знайдено, але жодного показника не вдалося розпізнати. Можливо, незвичний формат лабораторії.",
+            ["upload.err.generic"]      = "Не вдалося розібрати PDF: {0}",
 
             ["tbl.indicator"]      = "Показник",
             ["tbl.value"]          = "Значення",
@@ -250,6 +256,17 @@ public class LocalizationService(IJSRuntime js)
             ["paywall.popular"] = "Популярний",
             ["paywall.contact"] = "Для оплати пишіть:",
             ["paywall.close"]   = "Закрити",
+
+            ["faq.title"] = "Часті запитання",
+            ["faq.q1"]    = "Які лабораторії підтримуються?",
+            ["faq.a1"]    = "Підтримуються PDF-файли з Synevo, Діла, CSD, Invivo, ADONIS та більшості інших українських лабораторій у стандартному форматі.",
+            ["faq.q2"]    = "Чи безпечно завантажувати медичні дані?",
+            ["faq.a2"]    = "Ваші дані зберігаються лише у вашому особистому акаунті. Ми не передаємо особисті дані третім особам і не продаємо медичну інформацію.",
+            ["faq.q3"]    = "Чи замінює AI розшифровка консультацію лікаря?",
+            ["faq.a3"]    = "Ні. Додаток надає загальноосвітні пояснення результатів аналізів і не є медичним пристроєм. Для лікування та інтерпретації результатів завжди звертайтесь до лікаря.",
+            ["faq.q4"]    = "Це безкоштовно?",
+            ["faq.a4"]    = "Так. Базовий функціонал — завантаження PDF, AI-розшифровка та графіки — доступний безкоштовно.",
+            ["disclaimer"] = "Застереження: Цей додаток надає загальноосвітні пояснення результатів лабораторних досліджень і не є медичним пристроєм. Не замінює консультацію, діагностику та лікування лікаря.",
         },
 
         ["en"] = new()
@@ -298,6 +315,12 @@ public class LocalizationService(IJSRuntime js)
             ["upload.saved"]       = "✅ Saved {0} metrics.",
             ["upload.saveFailed"]  = "Save error: {0}",
             ["upload.error"]       = "Error: {0}",
+            ["upload.duplicate"]        = "These results are already in the database ({0} metrics match).",
+            ["upload.forceAdd"]         = "Save anyway",
+            ["upload.err.encrypted"]    = "The PDF is password-protected. Save a copy without a password and try again.",
+            ["upload.err.scanned"]      = "This PDF contains only a scanned image — there is no text layer. Try a PDF with selectable text (not a scan).",
+            ["upload.err.no_metrics"]   = "Text was found, but no lab metrics could be recognised. The lab format may be non-standard.",
+            ["upload.err.generic"]      = "Could not parse PDF: {0}",
 
             ["tbl.indicator"]      = "Indicator",
             ["tbl.value"]          = "Value",
@@ -405,6 +428,17 @@ public class LocalizationService(IJSRuntime js)
             ["paywall.popular"] = "Popular",
             ["paywall.contact"] = "To purchase, write to:",
             ["paywall.close"]   = "Close",
+
+            ["faq.title"] = "Frequently asked questions",
+            ["faq.q1"]    = "Which labs are supported?",
+            ["faq.a1"]    = "PDF reports from Synevo, Díla, CSD, Invivo, ADONIS and most other Ukrainian labs in standard format are supported.",
+            ["faq.q2"]    = "Is it safe to upload my medical data?",
+            ["faq.a2"]    = "Your data is stored only in your personal account. We do not share personal data with third parties or sell medical information.",
+            ["faq.q3"]    = "Does the AI replace a doctor's consultation?",
+            ["faq.a3"]    = "No. The app provides general educational explanations of lab results and is not a medical device. Always consult a doctor for treatment and interpretation of results.",
+            ["faq.q4"]    = "Is it free?",
+            ["faq.a4"]    = "Yes. The core features — PDF upload, AI interpretation, and charts — are free.",
+            ["disclaimer"] = "Disclaimer: This app provides general educational explanations of lab results and is not a medical device. It does not replace medical consultation, diagnosis, or treatment.",
         },
 
         ["ru"] = new()
@@ -453,6 +487,12 @@ public class LocalizationService(IJSRuntime js)
             ["upload.saved"]       = "✅ Сохранено {0} показателей.",
             ["upload.saveFailed"]  = "Ошибка сохранения: {0}",
             ["upload.error"]       = "Ошибка: {0}",
+            ["upload.duplicate"]        = "Эти анализы уже есть в базе ({0} показателей совпадают).",
+            ["upload.forceAdd"]         = "Сохранить всё равно",
+            ["upload.err.encrypted"]    = "PDF защищён паролем. Сохраните копию без пароля и повторите попытку.",
+            ["upload.err.scanned"]      = "PDF содержит только отсканированное изображение — текстового слоя нет. Попробуйте PDF с выделяемым текстом (не скан).",
+            ["upload.err.no_metrics"]   = "Текст найден, но ни один показатель не удалось распознать. Возможно, нестандартный формат лаборатории.",
+            ["upload.err.generic"]      = "Не удалось разобрать PDF: {0}",
 
             ["tbl.indicator"]      = "Показатель",
             ["tbl.value"]          = "Значение",
@@ -560,6 +600,17 @@ public class LocalizationService(IJSRuntime js)
             ["paywall.popular"] = "Популярный",
             ["paywall.contact"] = "Для оплаты пишите:",
             ["paywall.close"]   = "Закрыть",
+
+            ["faq.title"] = "Частые вопросы",
+            ["faq.q1"]    = "Какие лаборатории поддерживаются?",
+            ["faq.a1"]    = "Поддерживаются PDF-файлы из Synevo, Діла, CSD, Invivo, ADONIS и большинства других украинских лабораторий в стандартном формате.",
+            ["faq.q2"]    = "Безопасно ли загружать медицинские данные?",
+            ["faq.a2"]    = "Ваши данные хранятся только в вашем личном аккаунте. Мы не передаём персональные данные третьим лицам и не продаём медицинскую информацию.",
+            ["faq.q3"]    = "Заменяет ли AI расшифровка консультацию врача?",
+            ["faq.a3"]    = "Нет. Приложение предоставляет общеобразовательные объяснения результатов анализов и не является медицинским устройством. Для лечения и интерпретации всегда обращайтесь к врачу.",
+            ["faq.q4"]    = "Это бесплатно?",
+            ["faq.a4"]    = "Да. Базовый функционал — загрузка PDF, AI-расшифровка и графики — доступен бесплатно.",
+            ["disclaimer"] = "Предупреждение: Это приложение предоставляет общеобразовательные объяснения результатов лабораторных исследований и не является медицинским устройством. Не заменяет консультацию, диагностику и лечение врача.",
         },
     };
 }

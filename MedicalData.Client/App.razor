@@ -21,6 +21,9 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
-            await AuthState.InitializeAsync();
+        {
+            try { await AuthState.InitializeAsync(); }
+            catch { /* API unavailable — stay on current route */ }
+        }
     }
 }

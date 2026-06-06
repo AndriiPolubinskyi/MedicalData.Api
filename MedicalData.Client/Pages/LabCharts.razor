@@ -39,6 +39,23 @@
             </div>
 
             <div class="nav-right">
+                <button class="theme-toggle-btn" @onclick="ToggleThemeAsync" title="@(currentTheme == "dark" ? "Light mode" : "Dark mode")">
+                    @if (currentTheme == "dark")
+                    {
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                            <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                        </svg>
+                    }
+                    else
+                    {
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
+                    }
+                </button>
                 <div class="lang-switcher">
                     <button class="lang-btn @(Loc.Lang == "uk" ? "active" : "")" @onclick='() => SwitchLangAsync("uk")'>UA</button>
                     <button class="lang-btn @(Loc.Lang == "en" ? "active" : "")" @onclick='() => SwitchLangAsync("en")'>EN</button>
@@ -716,9 +733,8 @@
                                                  Items="@apexData"
                                                  Name="@selectedTestName"
                                                  SeriesType="SeriesType.Area"
-                                                 XValue="@(e => e.Date)"
-                                                 YValue="@(e => (decimal?)e.Value)"
-                                                 OrderBy="@(e => e.X)" />
+                                                 XValue="@(e => e.Dt.ToString("dd.MM.yy"))"
+                                                 YValue="@(e => (decimal?)e.Value)" />
                             </ApexChart>
                         </div>
                     }
@@ -839,6 +855,12 @@
                 </div>
 
                 <!-- Footer -->
+                @if (parsedIsDuplicate)
+                {
+                    <div class="modal-duplicate-warn">
+                        ⚠ @Loc.Format("upload.duplicate", parsedExistingMatchCount)
+                    </div>
+                }
                 <div class="modal-footer">
                     <label class="btn-ghost" style="cursor:pointer;position:relative;overflow:hidden;">
                         Інший PDF
@@ -846,9 +868,18 @@
                                    style="position:absolute;inset:0;opacity:0;cursor:pointer;" />
                     </label>
                     <button class="btn-ghost" @onclick="DiscardParsed">Скасувати</button>
-                    <button class="btn-primary" @onclick="SaveAsync" disabled="@isSaving">
-                        @(isSaving ? Loc["upload.saving"] : $"Додати {parsedResults.Count} показників")
-                    </button>
+                    @if (parsedIsDuplicate)
+                    {
+                        <button class="btn-ghost btn-ghost--warn" @onclick='() => SaveAsync(force: true)' disabled="@isSaving">
+                            @(isSaving ? Loc["upload.saving"] : Loc["upload.forceAdd"])
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn-primary" @onclick="() => SaveAsync()" disabled="@isSaving">
+                            @(isSaving ? Loc["upload.saving"] : $"Додати {parsedResults.Count} показників")
+                        </button>
+                    }
                 </div>
 
             </div>
@@ -887,6 +918,9 @@
 
     private bool HasData => historyByDate?.Count > 0;
 
+    // ── Theme ─────────────────────────────────────────
+    private string currentTheme = "dark";
+
     // ── User info ─────────────────────────────────────
     private string? userName;
     private string? userPic;
@@ -918,6 +952,8 @@
     private List<ParsedLabMetric>? parsedResults;
     private DateTime? parsedDate;
     private string? uploadAiSummary;
+    private bool parsedIsDuplicate;
+    private int parsedExistingMatchCount;
 
     // ── History ───────────────────────────────────────
     private Dictionary<DateTime, List<LabResult>>? historyByDate;
@@ -1046,7 +1082,7 @@
     private string selectedTestName = "";
     private int chartVersion;
 
-    private record ChartPoint(string Date, double Value);
+    private record ChartPoint(DateTime Dt, double Value);
     private record TestGroupDto(int? Id, string Name, string NameEn, string NameRu, string Icon, string Color, List<string> Tests);
 
     private IEnumerable<TestGroupDto> FilteredGroups =>
@@ -1139,16 +1175,23 @@
         if (!firstRender) return;
         try
         {
+            currentTheme = await JS.InvokeAsync<string>("getTheme");
             var user = await Auth.GetUserAsync();
             if (user.Identity?.IsAuthenticated == true)
             {
                 await ProfileSvc.LoadAsync();
                 userName = user.FindFirst(ClaimTypes.Name)?.Value;
                 userPic  = user.FindFirst("picture")?.Value;
-                StateHasChanged();
             }
+            StateHasChanged();
         }
         catch (Exception ex) { Logger.LogWarning(ex, "OnAfterRender init failed"); }
+    }
+
+    private async Task ToggleThemeAsync()
+    {
+        currentTheme = currentTheme == "dark" ? "light" : "dark";
+        await JS.InvokeVoidAsync("setTheme", currentTheme);
     }
 
     // ── Data loading ──────────────────────────────────
@@ -1283,13 +1326,27 @@
                 uploadError = true; return;
             }
             var parsed    = await resp.Content.ReadFromJsonAsync<UploadPdfLabResultsResponse>();
+            parsedIsDuplicate = parsed?.IsDuplicate ?? false;
+            parsedExistingMatchCount = parsed?.ExistingMatchCount ?? 0;
+
+            if (!string.IsNullOrWhiteSpace(parsed?.ParseError))
+            {
+                uploadMsg = parsed.ParseError switch
+                {
+                    "encrypted"  => Loc["upload.err.encrypted"],
+                    "scanned"    => Loc["upload.err.scanned"],
+                    "no_metrics" => Loc["upload.err.no_metrics"],
+                    var other    => Loc.Format("upload.err.generic", other),
+                };
+                uploadError = true;
+                Logger.LogWarning("PDF parse error: {Error}", parsed.ParseError);
+                return;
+            }
+
             parsedResults = parsed?.Results ?? [];
             parsedDate    = parsed?.Date;
-            Logger.LogInformation("PDF parsed: {Count} results, date {Date}", parsedResults.Count, parsedDate);
-            uploadMsg     = parsedResults.Count == 0
-                ? Loc["upload.notFound"]
-                : Loc.Format("upload.found", parsedResults.Count);
-            uploadError = parsedResults.Count == 0;
+            Logger.LogInformation("PDF parsed: {Count} results, date {Date}, isDuplicate {Dup}", parsedResults.Count, parsedDate, parsedIsDuplicate);
+            uploadMsg = Loc.Format("upload.found", parsedResults.Count);
             showFullSummary = false;
         }
         catch (IOException ex)
@@ -1305,15 +1362,21 @@
         finally { isParsing = false; }
     }
 
-    private async Task SaveAsync()
+    private async Task SaveAsync(bool force = false)
     {
         if (parsedResults is null or { Count: 0 }) return;
         isSaving = true; uploadMsg = null; uploadError = false;
-        Logger.LogInformation("Saving {Count} results, date {Date}", parsedResults.Count, parsedDate);
+        Logger.LogInformation("Saving {Count} results, date {Date}, force {Force}", parsedResults.Count, parsedDate, force);
         try
         {
-            var body = new { date = parsedDate ?? DateTime.Today, results = parsedResults.Select(x => new { testName = x.TestName, value = x.Value, unit = x.Unit, referenceRange = x.ReferenceRange, isAbnormal = x.IsAbnormal }) };
+            var body = new { date = parsedDate ?? DateTime.Today, force, results = parsedResults.Select(x => new { testName = x.TestName, value = x.Value, unit = x.Unit, referenceRange = x.ReferenceRange, isAbnormal = x.IsAbnormal }) };
             var resp = await Http.PostAsJsonAsync("/api/LabResult/save-parsed", body);
+            if (resp.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                parsedIsDuplicate = true;
+                uploadMsg = Loc.Format("upload.duplicate", parsedExistingMatchCount);
+                uploadError = true; return;
+            }
             if (!resp.IsSuccessStatusCode)
             {
                 Logger.LogWarning("Save failed: {Status}", (int)resp.StatusCode);
@@ -1322,6 +1385,7 @@
             Logger.LogInformation("Saved {Count} results successfully", parsedResults.Count);
             uploadMsg = Loc.Format("upload.saved", parsedResults.Count);
             parsedResults = null; selectedFile = null;
+            parsedIsDuplicate = false; parsedExistingMatchCount = 0;
             await Task.WhenAll(LoadHistoryAsync(), LoadLabTypesAsync());
         }
         catch (Exception ex)
@@ -1453,10 +1517,17 @@
         var refRange = ordered.FirstOrDefault(x => !string.IsNullOrEmpty(x.ReferenceRange))?.ReferenceRange ?? "";
 
         selectedTestName = name;
-        apexData   = ordered.Select(r => new ChartPoint(r.TestDate.ToString("dd.MM.yy"), r.Value)).ToList();
+        apexData   = ordered.Select(r => new ChartPoint(r.TestDate, r.Value)).ToList();
         apexOptions = BuildChartOptions(refRange);
         chartVersion++;
         StateHasChanged();
+    }
+
+    private static double? ParseRefNum(string s)
+    {
+        var clean = s.Trim().Replace(',', '.');
+        return double.TryParse(clean, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : null;
     }
 
     private ApexChartOptions<ChartPoint> BuildChartOptions(string refRange)
@@ -1464,15 +1535,28 @@
         double? refLo = null, refHi = null;
         if (!string.IsNullOrEmpty(refRange))
         {
-            // try dash separator (skip leading minus for negative numbers)
-            int sep = refRange.IndexOf('–');
-            if (sep < 0) sep = refRange.IndexOf('-', 1);
-            if (sep > 0 &&
-                double.TryParse(refRange[..sep].Trim(), System.Globalization.NumberStyles.Any,
-                    System.Globalization.CultureInfo.InvariantCulture, out var lo) &&
-                double.TryParse(refRange[(sep + 1)..].Trim(), System.Globalization.NumberStyles.Any,
-                    System.Globalization.CultureInfo.InvariantCulture, out var hi))
-            { refLo = lo; refHi = hi; }
+            var r = refRange.Trim();
+
+            // "до X" / "< X" / "менше X" — upper bound only
+            var upperMatch = System.Text.RegularExpressions.Regex.Match(r,
+                @"^(до|менше|less\s+than|<|≤)\s*([\d,\.]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (upperMatch.Success)
+            {
+                refHi = ParseRefNum(upperMatch.Groups[2].Value);
+                refLo = 0;
+            }
+            else
+            {
+                // "X–Y" or "X - Y" (em-dash, en-dash, hyphen; skip leading minus)
+                int sep = r.IndexOf('–');
+                if (sep < 0) sep = r.IndexOf('−');
+                if (sep < 0) sep = r.IndexOf('-', 1);
+                if (sep > 0)
+                {
+                    refLo = ParseRefNum(r[..sep]);
+                    refHi = ParseRefNum(r[(sep + 1)..]);
+                }
+            }
         }
 
         var annotations = new Annotations();
@@ -1485,12 +1569,20 @@
                     Y           = (object)refLo.Value,
                     Y2          = (object)refHi.Value,
                     FillColor   = "#22C55E",
-                    Opacity     = 0.08,
-                    BorderColor = "transparent",
+                    Opacity     = 0.18,
+                    BorderColor = "rgba(34,197,94,.5)",
                     Label       = new Label
                     {
-                        Text  = refRange,
-                        Style = new Style { Background = "rgba(34,197,94,.15)", Color = "#4ade80", FontSize = "11px" }
+                        Text            = $"Норма: {refRange}",
+                        OffsetY         = -4,
+                        Style           = new Style
+                        {
+                            Background = "rgba(34,197,94,.25)",
+                            Color      = "#4ade80",
+                            FontSize   = "11px",
+                            FontWeight = "600",
+                            Padding    = new Padding { Top = 2, Bottom = 2, Left = 6, Right = 6 }
+                        }
                     }
                 }
             ];
@@ -1748,6 +1840,8 @@
         selectedFile = null;
         uploadMsg = null;
         uploadAiSummary = null;
+        parsedIsDuplicate = false;
+        parsedExistingMatchCount = 0;
         displayExplainTexts.Clear();
         showFullSummary = false;
     }

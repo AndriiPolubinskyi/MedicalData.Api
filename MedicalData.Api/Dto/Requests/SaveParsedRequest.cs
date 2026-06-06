@@ -4,6 +4,7 @@ public class SaveParsedRequest
 {
     public DateTime Date { get; set; }
     public List<SaveParsedMetric> Results { get; set; } = new();
+    public bool Force { get; set; }
 }
 
 public class SaveParsedMetric

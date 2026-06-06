@@ -5,6 +5,9 @@ public class UploadPdfLabResultsResponse
     public DateTime Date { get; set; }
     public int SavedCount { get; set; }
     public List<ParsedLabMetricResponse> Results { get; set; } = new();
+    public bool IsDuplicate { get; set; }
+    public int ExistingMatchCount { get; set; }
+    public string? ParseError { get; set; }
 }
 
 public class ParsedLabMetricResponse

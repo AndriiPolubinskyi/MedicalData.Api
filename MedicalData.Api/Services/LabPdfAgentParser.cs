@@ -15,6 +15,9 @@ public class ParsedLabPdfDocument
 {
     public DateTime? Date { get; set; }
     public List<ParsedLabMetric> Results { get; set; } = new();
+    // "encrypted" | "scanned" | "no_metrics" | raw exception message
+    public string? ParseError { get; set; }
+    public int ExtractedLinesCount { get; set; }
 }
 
 public class ParsedLabMetric
@@ -40,27 +43,46 @@ public class LabPdfAgentParser : ILabPdfAgentParser
     public Task<ParsedLabPdfDocument> ParseAsync(Stream pdfStream, CancellationToken cancellationToken = default)
     {
         if (!pdfStream.CanSeek)
-        {
             throw new InvalidOperationException("PDF stream must be seekable.");
-        }
 
         pdfStream.Position = 0;
 
         var parsed = new ParsedLabPdfDocument();
         var textLines = new List<string>();
 
-        using (var pdf = PdfDocument.Open(pdfStream))
+        try
         {
+            using var pdf = PdfDocument.Open(pdfStream);
             foreach (var page in pdf.GetPages())
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var lines = ExtractPageLines(page);
-                textLines.AddRange(lines);
+                textLines.AddRange(ExtractPageLines(page));
             }
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            var msg = ex.Message;
+            parsed.ParseError = (msg.Contains("encrypt", StringComparison.OrdinalIgnoreCase)
+                                 || msg.Contains("password", StringComparison.OrdinalIgnoreCase))
+                ? "encrypted"
+                : msg;
+            return Task.FromResult(parsed);
+        }
+
+        parsed.ExtractedLinesCount = textLines.Count;
+
+        if (textLines.Count == 0)
+        {
+            parsed.ParseError = "scanned";
+            return Task.FromResult(parsed);
         }
 
         parsed.Date = ExtractDate(textLines);
         parsed.Results = ExtractMetrics(textLines);
+
+        if (parsed.Results.Count == 0)
+            parsed.ParseError = "no_metrics";
 
         return Task.FromResult(parsed);
     }

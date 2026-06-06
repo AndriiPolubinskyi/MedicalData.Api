@@ -1,8 +1,10 @@
 @page "/"
 @layout BlankLayout
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 @inject NavigationManager Nav
 @inject LocalizationService Loc
 @inject AuthService Auth
+@inject IJSRuntime JS
 @implements IDisposable
 
 <!-- ── Nav ──────────────────────────────────────────────── -->
@@ -228,6 +230,34 @@
     </div>
 </section>
 
+<!-- ── FAQ ────────────────────────────────────────────────── -->
+<section class="lp-section lp-faq-section" id="faq">
+    <div class="lp-container">
+        <div class="lp-section-head">
+            <h2 class="lp-section-title">@Loc["faq.title"]</h2>
+        </div>
+        <div class="lp-faq">
+            <details class="lp-faq-item">
+                <summary class="lp-faq-q">@Loc["faq.q1"]</summary>
+                <p class="lp-faq-a">@Loc["faq.a1"]</p>
+            </details>
+            <details class="lp-faq-item">
+                <summary class="lp-faq-q">@Loc["faq.q2"]</summary>
+                <p class="lp-faq-a">@Loc["faq.a2"]</p>
+            </details>
+            <details class="lp-faq-item">
+                <summary class="lp-faq-q">@Loc["faq.q3"]</summary>
+                <p class="lp-faq-a">@Loc["faq.a3"]</p>
+            </details>
+            <details class="lp-faq-item">
+                <summary class="lp-faq-q">@Loc["faq.q4"]</summary>
+                <p class="lp-faq-a">@Loc["faq.a4"]</p>
+            </details>
+        </div>
+        <p class="lp-disclaimer">@Loc["disclaimer"]</p>
+    </div>
+</section>
+
 <!-- ── Footer ────────────────────────────────────────────── -->
 <footer class="lp-footer">
     <div class="lp-container lp-footer-inner">
@@ -250,6 +280,12 @@
 
         if (await Auth.IsAuthenticatedAsync())
             Nav.NavigateTo("/app");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await JS.InvokeVoidAsync("hideSeoShell");
     }
 
     private async Task SwitchLangAsync(string lang) => await Loc.SetLangAsync(lang);

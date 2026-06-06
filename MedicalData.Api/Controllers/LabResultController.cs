@@ -180,25 +180,46 @@ public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAge
         {
             parsedDocument = await pdfAgentParser.ParseAsync(memoryStream, cancellationToken);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return StatusCode(StatusCodes.Status422UnprocessableEntity, "Failed to parse the PDF content.");
-        }
-
-        if (parsedDocument.Results.Count == 0)
-        {
-            return StatusCode(StatusCodes.Status422UnprocessableEntity, "No lab results found in PDF.");
+            return Ok(new UploadPdfLabResultsResponse { ParseError = ex.Message });
         }
 
         var targetDate = date?.Date ?? parsedDocument.Date ?? DateTime.UtcNow.Date;
+
+        if (parsedDocument.Results.Count == 0)
+        {
+            return Ok(new UploadPdfLabResultsResponse
+            {
+                Date = targetDate,
+                ParseError = parsedDocument.ParseError ?? "no_metrics",
+            });
+        }
+
+        var uid = CurrentUserId;
+        var testDate = DateTime.SpecifyKind(targetDate.Date, DateTimeKind.Utc);
+        var parsedNames = parsedDocument.Results
+            .Where(r => !string.IsNullOrWhiteSpace(r.TestName))
+            .Select(r => r.TestName)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var existingCount = parsedNames.Count == 0 ? 0 : await context.LabResults
+            .Where(r => r.UserId == uid
+                        && r.TestDate >= testDate
+                        && r.TestDate < testDate.AddDays(1)
+                        && parsedNames.Contains(r.TestName))
+            .CountAsync(cancellationToken);
+        bool isDuplicate = parsedNames.Count > 0 && (double)existingCount / parsedNames.Count >= 0.8;
+
         var savedCount = persist
-            ? await SaveResultsByDateAsync(targetDate, parsedDocument.Results, cancellationToken, CurrentUserId)
+            ? await SaveResultsByDateAsync(targetDate, parsedDocument.Results, cancellationToken, uid)
             : 0;
 
         var response = new UploadPdfLabResultsResponse
         {
             Date = targetDate,
             SavedCount = savedCount,
+            IsDuplicate = isDuplicate,
+            ExistingMatchCount = existingCount,
             Results = parsedDocument.Results.Select(x => new ParsedLabMetricResponse
             {
                 TestName = x.TestName,
@@ -216,6 +237,27 @@ public class LabResultController(AppDbContext context, ILabPdfAgentParser pdfAge
     [HttpPost("save-parsed")]
     public async Task<ActionResult> SaveParsed([FromBody] SaveParsedRequest request, CancellationToken cancellationToken)
     {
+        if (!request.Force)
+        {
+            var uid2 = CurrentUserId;
+            var testDate2 = DateTime.SpecifyKind(request.Date.Date, DateTimeKind.Utc);
+            var names = request.Results
+                .Where(r => !string.IsNullOrWhiteSpace(r.TestName))
+                .Select(r => r.TestName)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            if (names.Count > 0)
+            {
+                var existingCount2 = await context.LabResults
+                    .Where(r => r.UserId == uid2
+                                && r.TestDate >= testDate2
+                                && r.TestDate < testDate2.AddDays(1)
+                                && names.Contains(r.TestName))
+                    .CountAsync(cancellationToken);
+                if ((double)existingCount2 / names.Count >= 0.8)
+                    return Conflict(new { isDuplicate = true, existingMatchCount = existingCount2 });
+            }
+        }
+
         var metrics = request.Results.Select(x => new ParsedLabMetric
         {
             TestName = x.TestName,

@@ -71,10 +71,16 @@ public class GroqLabPdfParser : ILabPdfAgentParser
         - Keep English test names as-is if no Ukrainian equivalent is clear
 
         VALUE RULES:
-        - value: decimal number with DOT separator
+        - value: ALWAYS a decimal number with DOT separator — NEVER null
         - Ukrainian reports use COMMA as decimal — always convert: "1,56" → 1.56
         - Strip ! or !!! markers — they indicate out-of-range, not part of the number
         - isAbnormal: true if value had ! or !!! marker, false otherwise
+        - For QUALITATIVE tests (positive/negative, detected/not detected):
+          use 1.0 for Positive/Виявлено/Reactive/Detected (patient's actual result)
+          use 0.0 for Negative/Не виявлено/Non-reactive/Not detected (patient's actual result)
+          set isAbnormal: true ONLY if the ACTUAL result is positive/detected
+          set isAbnormal: false if ACTUAL result is negative/not detected
+          NOTE: referenceRange "Не виявлено" means "normal = not detected" — do NOT set isAbnormal based on referenceRange alone
 
         UNIT RULES:
         - unit: measurement unit only (e.g., "ммоль/л", "г/л", "%", "х10^9/л", "pg/ml")
@@ -226,13 +232,33 @@ public class GroqLabPdfParser : ILabPdfAgentParser
             foreach (var item in dto.Results ?? [])
             {
                 if (string.IsNullOrWhiteSpace(item.TestName)) continue;
+
+                var isAbnormal = item.IsAbnormal;
+
+                double value;
+                if (item.Value.HasValue)
+                {
+                    value = item.Value.Value;
+                }
+                else
+                {
+                    // Qualitative result — LLM returned null for positive/negative tests.
+                    // referenceRange "Не виявлено" means "normal = not detected",
+                    // so when the actual result is also not detected, isAbnormal must be false.
+                    var range = (item.ReferenceRange ?? "").ToLowerInvariant();
+                    if (range.Contains("не виявлено") || range.Contains("negative") || range.Contains("non-reactive"))
+                        isAbnormal = false;
+
+                    value = isAbnormal ? 1.0 : 0.0;
+                }
+
                 doc.Results.Add(new ParsedLabMetric
                 {
                     TestName = item.TestName.Trim(),
-                    Value = item.Value,
+                    Value = value,
                     Unit = item.Unit?.Trim() ?? string.Empty,
                     ReferenceRange = item.ReferenceRange?.Trim() ?? string.Empty,
-                    IsAbnormal = item.IsAbnormal,
+                    IsAbnormal = isAbnormal,
                 });
             }
         }
@@ -250,7 +276,7 @@ public class GroqLabPdfParser : ILabPdfAgentParser
     private sealed class AiResultItem
     {
         [JsonPropertyName("testName")] public string? TestName { get; set; }
-        [JsonPropertyName("value")] public double Value { get; set; }
+        [JsonPropertyName("value")] public double? Value { get; set; }
         [JsonPropertyName("unit")] public string? Unit { get; set; }
         [JsonPropertyName("referenceRange")] public string? ReferenceRange { get; set; }
         [JsonPropertyName("isAbnormal")] public bool IsAbnormal { get; set; }

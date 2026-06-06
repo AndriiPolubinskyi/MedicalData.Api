@@ -1,5 +1,6 @@
 @page "/login"
 @layout BlankLayout
+@attribute [Microsoft.AspNetCore.Authorization.AllowAnonymous]
 @inject IConfiguration Config
 @inject NavigationManager Nav
 @inject LocalizationService Loc
@@ -33,13 +34,17 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await Loc.InitAsync();
-        _locHandler = () => InvokeAsync(StateHasChanged);
-        Loc.LanguageChanged += _locHandler;
+        try
+        {
+            await Loc.InitAsync();
+            _locHandler = () => InvokeAsync(StateHasChanged);
+            Loc.LanguageChanged += _locHandler;
 
-        var apiBase = Config["ApiBaseUrl"]?.TrimEnd('/') ?? "";
-        var returnUrl = Nav.BaseUri.TrimEnd('/') + "/auth/callback";
-        LoginUrl = $"{apiBase}/api/auth/google?returnUrl={Uri.EscapeDataString(returnUrl)}";
+            var apiBase = Config["ApiBaseUrl"]?.TrimEnd('/') ?? "";
+            var returnUrl = Nav.BaseUri.TrimEnd('/') + "/auth/callback";
+            LoginUrl = $"{apiBase}/api/auth/google?returnUrl={Uri.EscapeDataString(returnUrl)}";
+        }
+        catch { /* config unavailable — leave LoginUrl empty */ }
     }
 
     private async Task SwitchLangAsync(string lang) => await Loc.SetLangAsync(lang);
