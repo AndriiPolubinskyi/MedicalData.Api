@@ -19,6 +19,7 @@
             @Loc["brand"]
         </a>
         <div class="lp-nav-right">
+            <a href="/articles/" class="lp-nav-link">Статті</a>
             <a href="/demo" class="lp-nav-link">@Loc["demo.try"]</a>
             <div class="lang-switcher">
                 <button class="lang-btn @(Loc.Lang == "uk" ? "active" : "")" @onclick='() => SwitchLangAsync("uk")'>UA</button>
@@ -230,6 +231,45 @@
     </div>
 </section>
 
+<!-- ── Articles ─────────────────────────────────────────── -->
+<section class="lp-section lp-articles-section">
+    <div class="lp-container">
+        <div class="lp-section-head">
+            <h2 class="lp-section-title">Корисні статті про аналізи</h2>
+            <p class="lp-section-sub">Прості пояснення лабораторних показників без медичного жаргону</p>
+        </div>
+        <div class="lp-articles-grid">
+            <a href="/articles/hemohlobin/" class="lp-article-card card-sm">
+                <span class="lp-article-tag">ЗАК</span>
+                <span class="lp-article-title">Гемоглобін: норма та відхилення</span>
+            </a>
+            <a href="/articles/ferytyn-low/" class="lp-article-card card-sm">
+                <span class="lp-article-tag">Залізо</span>
+                <span class="lp-article-title">Низький феритин: причини і що робити</span>
+            </a>
+            <a href="/articles/alt/" class="lp-article-card card-sm">
+                <span class="lp-article-tag">Печінка</span>
+                <span class="lp-article-title">АЛТ підвищений: що це означає</span>
+            </a>
+            <a href="/articles/hba1c/" class="lp-article-card card-sm">
+                <span class="lp-article-tag">Глюкоза</span>
+                <span class="lp-article-title">HbA1c: норма та рівні діабету</span>
+            </a>
+            <a href="/articles/ttg/" class="lp-article-card card-sm">
+                <span class="lp-article-tag">Щитоподібна</span>
+                <span class="lp-article-title">ТТГ підвищений або знижений</span>
+            </a>
+            <a href="/articles/crp/" class="lp-article-card card-sm">
+                <span class="lp-article-tag">Запалення</span>
+                <span class="lp-article-title">С-реактивний білок: маркер запалення</span>
+            </a>
+        </div>
+        <div class="lp-articles-more">
+            <a href="/articles/" class="btn-ghost">Всі статті →</a>
+        </div>
+    </div>
+</section>
+
 <!-- ── FAQ ────────────────────────────────────────────────── -->
 <section class="lp-section lp-faq-section" id="faq">
     <div class="lp-container">
@@ -263,6 +303,7 @@
     <div class="lp-container lp-footer-inner">
         <span class="lp-footer-copy">© 2025 @Loc["brand"]</span>
         <nav class="lp-footer-links">
+            <a href="/articles/">Статті</a>
             <a href="/demo">@Loc["demo.try"]</a>
             <a href="/login">@Loc["login.google.short"]</a>
         </nav>
