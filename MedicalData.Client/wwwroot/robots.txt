@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 Allow: /demo
 Disallow: /login
-Disallow: /app
+Disallow: /app/
 Disallow: /auth/
 Disallow: /shared/
 
