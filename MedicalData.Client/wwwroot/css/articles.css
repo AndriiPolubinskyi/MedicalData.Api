@@ -1,0 +1,98 @@
+/* === Мої аналізи — Article pages shared CSS === */
+:root {
+    --bg:#0b1025;--card:rgba(255,255,255,.04);--card2:rgba(255,255,255,.07);
+    --text:#e8eaf6;--text-sub:rgba(232,234,246,.72);--text-muted:rgba(232,234,246,.42);
+    --border:rgba(255,255,255,.08);--primary:#6366f1;--primary-dim:rgba(99,102,241,.14);
+    --success:#22c55e;--warning:#f59e0b;--danger:#ef4444;
+    --ease:cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+a{color:var(--primary);text-decoration:none}
+a:hover{text-decoration:underline}
+img{max-width:100%}
+
+/* ── Nav ── */
+.a-nav{border-bottom:1px solid var(--border);background:rgba(11,16,37,.9);backdrop-filter:blur(14px);position:sticky;top:0;z-index:100}
+.a-nav-inner{max-width:820px;margin:0 auto;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.a-logo{display:flex;align-items:center;gap:8px;color:var(--text);font-weight:600;font-size:15px;text-decoration:none}
+.a-logo-icon{width:28px;height:28px;background:var(--primary);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.a-nav-links{display:flex;align-items:center;gap:16px}
+.a-nav-link{font-size:13px;color:var(--text-sub);text-decoration:none;transition:color 150ms var(--ease)}
+.a-nav-link:hover{color:var(--text);text-decoration:none}
+.a-btn-sm{background:var(--primary);color:#fff;padding:6px 14px;border-radius:7px;font-size:13px;font-weight:500;text-decoration:none;transition:opacity 150ms}
+.a-btn-sm:hover{opacity:.85;text-decoration:none}
+
+/* ── Container ── */
+.a-wrap{max-width:820px;margin:0 auto;padding:0 24px}
+
+/* ── Breadcrumb ── */
+.a-bread{padding:20px 0 0;font-size:13px;color:var(--text-muted)}
+.a-bread a{color:var(--primary);text-decoration:none}
+.a-bread a:hover{text-decoration:underline}
+.a-bread-sep{margin:0 6px;opacity:.5}
+
+/* ── Article header ── */
+.a-header{padding:28px 0 0}
+.a-eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--primary);margin-bottom:12px}
+.a-h1{font-size:clamp(22px,4vw,34px);font-weight:700;line-height:1.25;margin-bottom:18px}
+.a-intro{font-size:16px;color:var(--text-sub);line-height:1.75;margin-bottom:36px;padding-bottom:28px;border-bottom:1px solid var(--border)}
+
+/* ── Norm box ── */
+.a-norm{background:var(--card2);border:1px solid var(--border);border-left:3px solid var(--primary);border-radius:8px;padding:14px 18px;margin:0 0 24px}
+.a-norm p{font-size:14px;color:var(--text-sub);line-height:1.65}
+.a-norm strong{color:var(--text)}
+
+/* ── Section ── */
+.a-section{margin-bottom:32px}
+.a-h2{font-size:19px;font-weight:600;margin-bottom:12px;color:var(--text);display:flex;align-items:center;gap:10px}
+.a-h2::before{content:'';display:inline-block;width:3px;height:18px;background:var(--primary);border-radius:2px;flex-shrink:0}
+.a-p{font-size:15px;color:var(--text-sub);line-height:1.75;margin-bottom:10px}
+.a-ul{list-style:none;padding:0;margin-bottom:10px}
+.a-ul li{font-size:15px;color:var(--text-sub);line-height:1.7;padding-left:18px;position:relative;margin-bottom:5px}
+.a-ul li::before{content:'•';position:absolute;left:0;color:var(--primary)}
+
+/* ── CTA ── */
+.a-cta{background:var(--primary-dim);border:1px solid rgba(99,102,241,.25);border-radius:12px;padding:28px 28px 24px;margin:40px 0 28px;text-align:center}
+.a-cta-title{font-size:18px;font-weight:600;margin-bottom:8px}
+.a-cta-sub{font-size:14px;color:var(--text-sub);margin-bottom:18px;line-height:1.6}
+.a-cta-btn{display:inline-flex;align-items:center;gap:8px;background:var(--primary);color:#fff;padding:10px 22px;border-radius:8px;font-size:15px;font-weight:500;text-decoration:none;transition:opacity 150ms}
+.a-cta-btn:hover{opacity:.85;text-decoration:none}
+
+/* ── Disclaimer ── */
+.a-disclaimer{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:13px 16px;font-size:12px;color:var(--text-muted);line-height:1.65;margin-bottom:40px}
+
+/* ── Related ── */
+.a-related{border-top:1px solid var(--border);padding-top:28px;margin-bottom:48px}
+.a-related-title{font-size:14px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px}
+.a-related-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+.a-related-link{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-size:14px;color:var(--text-sub);text-decoration:none;transition:border-color 150ms,color 150ms}
+.a-related-link:hover{border-color:var(--primary);color:var(--text);text-decoration:none}
+
+/* ── Footer ── */
+.a-footer{border-top:1px solid var(--border);padding:22px 0;font-size:13px;color:var(--text-muted);text-align:center}
+.a-footer a{color:var(--primary)}
+.a-footer a:hover{text-decoration:underline}
+
+/* ── List page ── */
+.a-list-hero{padding:48px 0 36px;text-align:center}
+.a-list-h1{font-size:clamp(26px,5vw,42px);font-weight:700;margin-bottom:14px}
+.a-list-sub{font-size:16px;color:var(--text-sub);max-width:520px;margin:0 auto 12px;line-height:1.65}
+.a-group-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin:32px 0 12px}
+.a-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px;margin-bottom:8px}
+.a-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;text-decoration:none;display:block;transition:border-color 150ms,transform 150ms}
+.a-card:hover{border-color:var(--primary);transform:translateY(-1px);text-decoration:none}
+.a-card-tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--primary);margin-bottom:6px}
+.a-card-title{font-size:15px;font-weight:500;color:var(--text);line-height:1.4;margin-bottom:4px}
+.a-card-desc{font-size:13px;color:var(--text-muted);line-height:1.5}
+
+/* ── Mobile ── */
+@media(max-width:600px){
+    .a-nav-inner{padding:0 16px}
+    .a-wrap{padding:0 16px}
+    .a-cta{padding:20px 16px 18px}
+    .a-grid{grid-template-columns:1fr}
+    .a-related-grid{grid-template-columns:1fr}
+    .a-nav-link.hide-mobile{display:none}
+}
