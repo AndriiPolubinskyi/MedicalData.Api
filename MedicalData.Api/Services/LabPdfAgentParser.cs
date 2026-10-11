@@ -31,6 +31,13 @@ public class ParsedLabMetric
 
 public class LabPdfAgentParser : ILabPdfAgentParser
 {
+    private readonly ILogger<LabPdfAgentParser> _logger;
+
+    public LabPdfAgentParser(ILogger<LabPdfAgentParser> logger)
+    {
+        _logger = logger;
+    }
+
     private static readonly Regex MultiSpaceRegex = new("\\s{2,}", RegexOptions.Compiled);
     private static readonly Regex AbnormalMarkerRegex = new("\\s*!+\\s*", RegexOptions.Compiled);
     private static readonly Regex DateRegex = new(
@@ -50,13 +57,20 @@ public class LabPdfAgentParser : ILabPdfAgentParser
         var parsed = new ParsedLabPdfDocument();
         var textLines = new List<string>();
 
+        _logger.LogInformation("LabPdfAgentParser: starting PDF extraction");
+
         try
         {
             using var pdf = PdfDocument.Open(pdfStream);
+            var pageCount = pdf.NumberOfPages;
+            _logger.LogInformation("LabPdfAgentParser: opened PDF, {PageCount} page(s)", pageCount);
+
             foreach (var page in pdf.GetPages())
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                var beforeCount = textLines.Count;
                 textLines.AddRange(ExtractPageLines(page));
+                _logger.LogDebug("LabPdfAgentParser: page {PageNum} extracted {LineCount} lines", page.Number, textLines.Count - beforeCount);
             }
         }
         catch (OperationCanceledException) { throw; }
@@ -67,22 +81,32 @@ public class LabPdfAgentParser : ILabPdfAgentParser
                                  || msg.Contains("password", StringComparison.OrdinalIgnoreCase))
                 ? "encrypted"
                 : msg;
+            _logger.LogWarning("LabPdfAgentParser: PDF open failed — ParseError={Error}", parsed.ParseError);
             return Task.FromResult(parsed);
         }
 
         parsed.ExtractedLinesCount = textLines.Count;
+        _logger.LogInformation("LabPdfAgentParser: extracted {TotalLines} total lines", textLines.Count);
 
         if (textLines.Count == 0)
         {
             parsed.ParseError = "scanned";
+            _logger.LogWarning("LabPdfAgentParser: no text extracted — PDF is likely scanned");
             return Task.FromResult(parsed);
         }
 
         parsed.Date = ExtractDate(textLines);
+        _logger.LogInformation("LabPdfAgentParser: detected date={Date}", parsed.Date?.ToString("yyyy-MM-dd") ?? "null");
+
         parsed.Results = ExtractMetrics(textLines);
+        _logger.LogInformation("LabPdfAgentParser: extracted {Count} metrics", parsed.Results.Count);
 
         if (parsed.Results.Count == 0)
+        {
             parsed.ParseError = "no_metrics";
+            _logger.LogWarning("LabPdfAgentParser: no metrics found. Lines sample: {Sample}",
+                string.Join(" | ", textLines.Take(5)));
+        }
 
         return Task.FromResult(parsed);
     }

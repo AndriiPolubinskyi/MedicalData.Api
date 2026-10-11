@@ -10,6 +10,7 @@ public class GeminiLabPdfParser : ILabPdfAgentParser
     private readonly HttpClient _http;
     private readonly string _apiKey;
     private readonly string _model;
+    private readonly ILogger<GeminiLabPdfParser> _logger;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -99,8 +100,10 @@ public class GeminiLabPdfParser : ILabPdfAgentParser
         - If a field is unknown or missing, use null or empty string
         """;
 
-    public GeminiLabPdfParser(IHttpClientFactory httpClientFactory, IConfiguration configuration)
+    public GeminiLabPdfParser(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<GeminiLabPdfParser> logger)
     {
+        _logger = logger;
+
         _apiKey = configuration["Gemini:ApiKey"]
             ?? throw new InvalidOperationException(
                 "Gemini:ApiKey is not configured. Add it to appsettings.json or as environment variable.");
@@ -114,7 +117,10 @@ public class GeminiLabPdfParser : ILabPdfAgentParser
         pdfStream.Position = 0;
         using var ms = new MemoryStream();
         await pdfStream.CopyToAsync(ms, cancellationToken);
-        var base64Pdf = Convert.ToBase64String(ms.ToArray());
+        var pdfBytes = ms.ToArray();
+        var base64Pdf = Convert.ToBase64String(pdfBytes);
+
+        _logger.LogInformation("GeminiLabPdfParser: sending {SizeKb:F1} KB to model {Model}", pdfBytes.Length / 1024.0, _model);
 
         var requestBody = new
         {
@@ -150,11 +156,20 @@ public class GeminiLabPdfParser : ILabPdfAgentParser
         var content = new StringContent(JsonSerializer.Serialize(requestBody, JsonOptions), Encoding.UTF8, "application/json");
 
         var httpResponse = await _http.PostAsync(url, content, cancellationToken);
+        _logger.LogInformation("GeminiLabPdfParser: HTTP {StatusCode}", (int)httpResponse.StatusCode);
         httpResponse.EnsureSuccessStatusCode();
 
         var responseJson = await httpResponse.Content.ReadAsStringAsync(cancellationToken);
         var json = ExtractText(responseJson);
-        return ParseResponse(json);
+        _logger.LogInformation("GeminiLabPdfParser: received response ({Chars} chars)", json.Length);
+        _logger.LogDebug("GeminiLabPdfParser: raw response: {Json}", json);
+
+        var doc = ParseResponse(json);
+        _logger.LogInformation("GeminiLabPdfParser: parsed {Count} metrics, date={Date}", doc.Results.Count, doc.Date?.ToString("yyyy-MM-dd") ?? "null");
+        if (doc.Results.Count == 0)
+            _logger.LogWarning("GeminiLabPdfParser: no metrics parsed. ParseError={Error}", doc.ParseError);
+
+        return doc;
     }
 
     private static string ExtractText(string responseJson)
@@ -175,16 +190,24 @@ public class GeminiLabPdfParser : ILabPdfAgentParser
         }
     }
 
-    private static ParsedLabPdfDocument ParseResponse(string json)
+    private ParsedLabPdfDocument ParseResponse(string json)
     {
         var doc = new ParsedLabPdfDocument();
-        if (string.IsNullOrWhiteSpace(json)) return doc;
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            _logger.LogWarning("GeminiLabPdfParser: empty response from AI");
+            return doc;
+        }
 
         try
         {
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var dto = JsonSerializer.Deserialize<AiResponseDto>(json, options);
-            if (dto == null) return doc;
+            if (dto == null)
+            {
+                _logger.LogWarning("GeminiLabPdfParser: deserialized null from JSON");
+                return doc;
+            }
 
             if (!string.IsNullOrWhiteSpace(dto.Date)
                 && DateTime.TryParse(dto.Date, out var date))
@@ -206,7 +229,10 @@ public class GeminiLabPdfParser : ILabPdfAgentParser
                 });
             }
         }
-        catch (JsonException) { }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "GeminiLabPdfParser: failed to deserialize AI response");
+        }
 
         return doc;
     }

@@ -9,6 +9,7 @@ public class AiLabPdfParser : ILabPdfAgentParser
 {
     private readonly AnthropicClient _client;
     private readonly string _model;
+    private readonly ILogger<AiLabPdfParser> _logger;
 
     private const string SystemPrompt = """
         You are a medical lab report parser specializing in Ukrainian lab reports.
@@ -93,8 +94,10 @@ public class AiLabPdfParser : ILabPdfAgentParser
         - If a field is unknown or missing, use null or empty string
         """;
 
-    public AiLabPdfParser(IConfiguration configuration)
+    public AiLabPdfParser(IConfiguration configuration, ILogger<AiLabPdfParser> logger)
     {
+        _logger = logger;
+
         var apiKey = configuration["Anthropic:ApiKey"]
             ?? throw new InvalidOperationException(
                 "Anthropic:ApiKey is not configured. Add it to appsettings.json or as environment variable.");
@@ -108,7 +111,10 @@ public class AiLabPdfParser : ILabPdfAgentParser
         pdfStream.Position = 0;
         using var ms = new MemoryStream();
         await pdfStream.CopyToAsync(ms, cancellationToken);
-        var base64Pdf = Convert.ToBase64String(ms.ToArray());
+        var pdfBytes = ms.ToArray();
+        var base64Pdf = Convert.ToBase64String(pdfBytes);
+
+        _logger.LogInformation("AiLabPdfParser: sending {SizeKb:F1} KB to model {Model}", pdfBytes.Length / 1024.0, _model);
 
         var response = await _client.Messages.Create(new MessageCreateParams
         {
@@ -130,19 +136,35 @@ public class AiLabPdfParser : ILabPdfAgentParser
         });
 
         var json = response.Content.Select(b => b.Value).OfType<TextBlock>().FirstOrDefault()?.Text ?? "";
-        return ParseResponse(json);
+        _logger.LogInformation("AiLabPdfParser: received response ({Chars} chars)", json.Length);
+        _logger.LogDebug("AiLabPdfParser: raw response: {Json}", json);
+
+        var doc = ParseResponse(json);
+        _logger.LogInformation("AiLabPdfParser: parsed {Count} metrics, date={Date}", doc.Results.Count, doc.Date?.ToString("yyyy-MM-dd") ?? "null");
+        if (doc.Results.Count == 0)
+            _logger.LogWarning("AiLabPdfParser: no metrics parsed. ParseError={Error}", doc.ParseError);
+
+        return doc;
     }
 
-    private static ParsedLabPdfDocument ParseResponse(string json)
+    private ParsedLabPdfDocument ParseResponse(string json)
     {
         var doc = new ParsedLabPdfDocument();
-        if (string.IsNullOrWhiteSpace(json)) return doc;
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            _logger.LogWarning("AiLabPdfParser: empty response from AI");
+            return doc;
+        }
 
         try
         {
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var dto = JsonSerializer.Deserialize<AiResponseDto>(json, options);
-            if (dto == null) return doc;
+            if (dto == null)
+            {
+                _logger.LogWarning("AiLabPdfParser: deserialized null from JSON");
+                return doc;
+            }
 
             if (!string.IsNullOrWhiteSpace(dto.Date)
                 && DateTime.TryParse(dto.Date, out var date))
@@ -164,7 +186,10 @@ public class AiLabPdfParser : ILabPdfAgentParser
                 });
             }
         }
-        catch (JsonException) { }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "AiLabPdfParser: failed to deserialize AI response");
+        }
 
         return doc;
     }

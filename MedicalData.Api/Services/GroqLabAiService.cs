@@ -106,7 +106,7 @@ public class GroqLabAiService : ILabAiService
     {
         _apiKey = configuration["Groq:ApiKey"]
             ?? throw new InvalidOperationException("Groq:ApiKey is not configured.");
-        _model = configuration["Groq:Model"] ?? "llama-3.3-70b-versatile";
+        _model = configuration["Groq:Model"] ?? "openai/gpt-oss-120b";
         _http = httpClientFactory.CreateClient("groq");
     }
 
@@ -298,7 +298,7 @@ public class GroqLabAiService : ILabAiService
                 new { role = "user",   content = userMessage  }
             },
             temperature = 0.3,
-            max_tokens  = 250
+            max_tokens  = 1000 // reasoning models spend part of the budget on hidden reasoning
         };
 
         var json = JsonSerializer.Serialize(requestBody, JsonOptions);

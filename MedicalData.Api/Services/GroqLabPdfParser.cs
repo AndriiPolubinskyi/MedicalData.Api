@@ -11,6 +11,7 @@ public class GroqLabPdfParser : ILabPdfAgentParser
     private readonly HttpClient _http;
     private readonly string _apiKey;
     private readonly string _model;
+    private readonly ILogger<GroqLabPdfParser> _logger;
 
     private const string SystemPrompt = """
         You are a medical lab report parser. The text was extracted from a PDF and may come from any laboratory format.
@@ -92,19 +93,22 @@ public class GroqLabPdfParser : ILabPdfAgentParser
         - Use null or empty string if unknown
         """;
 
-    public GroqLabPdfParser(IHttpClientFactory httpClientFactory, IConfiguration configuration)
+    public GroqLabPdfParser(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<GroqLabPdfParser> logger)
     {
+        _logger = logger;
+
         _apiKey = configuration["Groq:ApiKey"]
             ?? throw new InvalidOperationException(
                 "Groq:ApiKey is not configured. Add it to appsettings.json or as environment variable.");
 
-        _model = configuration["Groq:Model"] ?? "llama-3.3-70b-versatile";
+        _model = configuration["Groq:Model"] ?? "openai/gpt-oss-120b";
         _http = httpClientFactory.CreateClient("groq");
     }
 
     public async Task<ParsedLabPdfDocument> ParseAsync(Stream pdfStream, CancellationToken cancellationToken = default)
     {
         var text = ExtractText(pdfStream);
+        _logger.LogInformation("GroqLabPdfParser: extracted {Chars} chars of text, sending to model {Model}", text.Length, _model);
 
         var requestBody = new
         {
@@ -126,14 +130,16 @@ public class GroqLabPdfParser : ILabPdfAgentParser
         };
 
         var httpResponse = await _http.SendAsync(request, cancellationToken);
+        _logger.LogInformation("GroqLabPdfParser: HTTP {StatusCode}", (int)httpResponse.StatusCode);
         httpResponse.EnsureSuccessStatusCode();
 
         var responseJson = await httpResponse.Content.ReadAsStringAsync(cancellationToken);
         var (json, truncated) = ExtractGroqText(responseJson);
+        _logger.LogInformation("GroqLabPdfParser: received response ({Chars} chars), truncated={Truncated}", json.Length, truncated);
 
-        // If the response was cut off mid-JSON (e.g. very large PDF), retry with a higher limit
         if (truncated && !string.IsNullOrWhiteSpace(json))
         {
+            _logger.LogWarning("GroqLabPdfParser: response truncated, retrying with max_tokens=32000");
             var retryBody = new
             {
                 model = _model,
@@ -155,10 +161,18 @@ public class GroqLabPdfParser : ILabPdfAgentParser
             if (retryResp.IsSuccessStatusCode)
             {
                 (json, _) = ExtractGroqText(await retryResp.Content.ReadAsStringAsync(cancellationToken));
+                _logger.LogInformation("GroqLabPdfParser: retry response ({Chars} chars)", json.Length);
             }
         }
 
-        return ParseResponse(json);
+        _logger.LogDebug("GroqLabPdfParser: raw response: {Json}", json);
+
+        var doc = ParseResponse(json);
+        _logger.LogInformation("GroqLabPdfParser: parsed {Count} metrics, date={Date}", doc.Results.Count, doc.Date?.ToString("yyyy-MM-dd") ?? "null");
+        if (doc.Results.Count == 0)
+            _logger.LogWarning("GroqLabPdfParser: no metrics parsed. ParseError={Error}", doc.ParseError);
+
+        return doc;
     }
 
     private static string ExtractText(Stream pdfStream)
