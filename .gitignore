@@ -10,3 +10,4 @@ riderModule.iml
 .idea/
 /MedicalData.Api/Examples
 notice.md
+**/appsettings.Test.json
